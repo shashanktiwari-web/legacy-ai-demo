@@ -340,7 +340,7 @@ function sendRealReminderEmail(){
     + `You haven't opened your Legacy AI companion today. Here are your 5 mandatory check-in questions — `
     + `reply directly to this email or open the companion to answer them there:\n\n`
     + dailyQuestions.map((q,i)=>`${i+1}. ${q}`).join('\n');
-  window.location.href = LegacyAIState.buildMailto(to, subject, body);
+  window.open(LegacyAIState.buildMailto(to, subject, body), '_blank');
 }
 
 function showToast(msg){
