@@ -378,7 +378,7 @@ function render(){
       <td>${row.triggerDate ? `<span class="trigger-date">${row.triggerDate}</span>` : `<span class="trigger-missing">not set in HR tool</span>`}</td>
       <td><span class="status ${row.status}">${statusLabel[row.status]}</span></td>
       <td><div class="docs">${docDot('Q1',row.q1)}${docDot('Q2',row.q2)}${docDot('Q3',row.q3)}${docDot('M',row.exp)}</div></td>
-      <td>${row.status==='sent' ? `<a href="${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html')}" target="_blank" class="btn sm"><i class="ti ti-external-link"></i> Preview employee link</a>` : row.status==='done' ? `<span class="footnote" style="margin:0;">—</span>` : `<div style="display:flex; gap:4px;"><button class="btn sm" onclick="sendInitiationEmail('${row.id}')" title="Real email: kick off this transition with the employee"><i class="ti ti-rocket"></i></button><button class="btn sm ${canSend?'primary':''}" ${canSend?'':'disabled'} onclick="sendToEmployee('${row.id}')"><i class="ti ti-mail"></i> Notify employee</button><button class="btn sm" ${canSend?'':'disabled'} onclick="sendRealEmail('${row.id}')" title="Opens a real mailto: draft for demo day"><i class="ti ti-send"></i></button></div>`}</td>
+      <td>${row.status==='sent' ? `<a href="${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html', row.id)}" target="_blank" class="btn sm"><i class="ti ti-external-link"></i> Preview employee link</a>` : row.status==='done' ? `<span class="footnote" style="margin:0;">—</span>` : `<div style="display:flex; gap:4px;"><button class="btn sm" onclick="sendInitiationEmail('${row.id}')" title="Real email: kick off this transition with the employee"><i class="ti ti-rocket"></i></button><button class="btn sm ${canSend?'primary':''}" ${canSend?'':'disabled'} onclick="sendToEmployee('${row.id}')"><i class="ti ti-mail"></i> Notify employee</button><button class="btn sm" ${canSend?'':'disabled'} onclick="sendRealEmail('${row.id}')" title="Opens a real mailto: draft for demo day"><i class="ti ti-send"></i></button></div>`}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -407,7 +407,7 @@ function sendRealEmail(id){
     + `Your manager, ${row.managerName}, has initiated your role transition (${row.id}). `
     + `We've pre-built your handover dashboard from your self-reviews and manager expectations doc — most of it is already filled in.\n\n`
     + `Open it here (demo link — open the employee validation dashboard in your browser):\n`
-    + `${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html')}\n\n`
+    + `${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html', row.id)}\n\n`
     + `Please review, confirm, or correct anything before it goes to your manager for approval.`;
   window.open(LegacyAIState.buildMailto(to, subject, body), '_blank');
   showToast(`Opening a real Gmail draft to ${to} in a new tab — hit send there to actually deliver it.`);
@@ -426,7 +426,7 @@ function sendInitiationEmail(id){
     + `Your manager, ${row.managerName}, has started a ${typeLabel[row.type].toLowerCase()} transition for you in Legacy AI (${row.id}).\n\n`
     + `Next step: log in with your razorpay.com work email and confirm the handover items we've drafted from your self-reviews, or add anything that's missing.\n\n`
     + `Open it here (demo link — open the employee validation dashboard in your browser):\n`
-    + `${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html')}\n\n`
+    + `${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html', row.id)}\n\n`
     + `This link only works for the email address the transition was raised against.`;
   window.open(LegacyAIState.buildMailto(to, subject, body), '_blank');
   showToast(`Opening a real Gmail initiation draft to ${to} in a new tab — hit send there to actually deliver it.`);
