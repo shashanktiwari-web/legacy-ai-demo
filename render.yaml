@@ -1,30 +1,7 @@
-# Render Blueprint — one-click deploy from GitHub.
-#
-# Push this repo to GitHub, then in the Render dashboard: New -> Blueprint
-# -> connect this repo. Render reads this file and creates the service
-# automatically — no manual dashboard configuration needed.
-#
-# Uses the existing Dockerfile as-is (env: docker), so this deploys exactly
-# what you've already tested locally — no separate Node buildpack config
-# to get wrong.
 services:
   - type: web
     name: legacy-ai
     env: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    plan: starter
-    # Persistent disk so legacy_ai.db survives restarts/redeploys. Render's
-    # free tier does NOT support persistent disks at all (confirmed against
-    # their docs) — "starter" (~$7/mo) is the cheapest plan that does.
-    #
-    # To run on the free tier instead: change "plan" to "free" and delete
-    # the "disk" block below. The app will still work, but legacy_ai.db
-    # resets to the seed data every time the service restarts or wakes
-    # from sleep (free services sleep after 15 min of inactivity) — fine
-    # for a quick demo, not fine if you need data to persist across a
-    # judging session with gaps in it.
-    disk:
-      name: legacy-ai-data
-      mountPath: /app/server
-      sizeGB: 1
+    plan: free
