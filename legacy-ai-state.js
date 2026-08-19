@@ -30,7 +30,7 @@ const LegacyAIState = (() => {
     sessionStorage.setItem(SESSION_KEY, id);
   }
 
-    // Builds an absolute URL (not just a relative path) — required because
+  // Builds an absolute URL (not just a relative path) — required because
   // this same helper is used both for in-app <a href> links (where a
   // relative path would work fine) AND for links dropped into real email
   // bodies (where a relative path is meaningless — the recipient's email
