@@ -20,6 +20,13 @@ const store = require('./db');
 const PORT = process.env.PORT || 3000;
 const FRONTEND_DIR = path.join(__dirname, '..'); // legacy-ai-*.html live one level up from /server
 
+// Where uploaded self-review / manager-expectations docs land when there's
+// no existing Google Doc link to use instead. Lives inside FRONTEND_DIR so
+// the existing static-file serving below already covers /uploads/* for
+// free — no separate route needed to serve them back out.
+const UPLOADS_DIR = path.join(FRONTEND_DIR, 'uploads');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -28,6 +35,10 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
+  '.pdf': 'application/pdf',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 function sendJson(res, status, data) {
@@ -109,6 +120,25 @@ async function handleApi(req, res, pathname, searchParams) {
       const body = await readBody(req);
       const result = store.syncDirectoryFromPastedCsv(body.csvText);
       return sendJson(res, 200, result);
+    }
+
+    // POST /api/directory/:email/upload — upload a missing self-review or
+    // manager-expectations doc directly, for when there's no existing
+    // Google Doc link to paste in. Body is JSON ({ field, filename,
+    // contentBase64 }) rather than multipart — reuses the existing JSON
+    // body reader instead of writing a multipart parser from scratch.
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'directory' && parts[2] && parts[3] === 'upload') {
+      const body = await readBody(req);
+      const { field, filename, contentBase64 } = body;
+      if (!field || !filename || !contentBase64) {
+        return sendJson(res, 400, { error: 'field, filename and contentBase64 are required' });
+      }
+      const buffer = Buffer.from(contentBase64, 'base64');
+      const safeName = `${Date.now()}-${String(filename).replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+      fs.writeFileSync(path.join(UPLOADS_DIR, safeName), buffer);
+      const url = `/uploads/${safeName}`;
+      const updated = store.updateUserDocLink(decodeURIComponent(parts[2]), field, url);
+      return sendJson(res, 200, { url, user: updated });
     }
 
     // GET /api/directory/:email
