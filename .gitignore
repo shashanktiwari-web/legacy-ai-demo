@@ -5,6 +5,10 @@
 server/legacy_ai.db
 server/legacy_ai.db-journal
 
+# Uploaded self-review / manager-expectations docs — runtime content,
+# same reasoning as the DB file above.
+uploads/
+
 # Editor/OS noise
 .DS_Store
 desktop.ini
