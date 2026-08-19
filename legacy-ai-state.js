@@ -122,6 +122,22 @@ const LegacyAIState = (() => {
     return apiSend('POST', '/api/directory/sync-pasted', { csvText });
   }
 
+  // Upload a missing self-review/manager-expectations doc directly, for
+  // when there's no existing Google Doc link to paste. Reads the file as
+  // base64 client-side (reuses the existing JSON POST plumbing — no new
+  // multipart parsing needed on the server) and stores it under /uploads.
+  async function uploadDirectoryDoc(email, field, file) {
+    const contentBase64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+      reader.onerror = () => reject(new Error('Could not read the file.'));
+      reader.readAsDataURL(file);
+    });
+    return apiSend('POST', `/api/directory/${encodeURIComponent(email)}/upload`, {
+      field, filename: file.name, contentBase64,
+    });
+  }
+
   // Used by the HR/Manager dashboard, which manages many transitions at
   // once and needs to update a specific one by id — not "the current
   // page's" transition the way patch() above does.
@@ -346,12 +362,16 @@ const LegacyAIState = (() => {
   }
 
   // ---------------------------------------------------------------------
-  // Real email — mailto: links, unchanged. Still no SMTP credentials in
-  // the page; the presenter's own mail client sends it.
+  // Real email — opens a Gmail compose draft in a new tab (prefilled
+  // to/subject/body, nothing sent automatically) instead of a generic
+  // mailto: link, which used to hand off to whatever the OS's default
+  // mail client was — not necessarily Gmail. Still no SMTP credentials
+  // in the page; the presenter reviews and hits send themselves.
   // ---------------------------------------------------------------------
 
   function buildMailto(to, subject, body) {
-    return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const params = new URLSearchParams({ view: 'cm', fs: '1', to, su: subject, body });
+    return `https://mail.google.com/mail/?${params.toString()}`;
   }
 
   // ---------------------------------------------------------------------
@@ -394,7 +414,7 @@ const LegacyAIState = (() => {
     get, patch, reset,
     saveContextAnswer, saveContextReview, appendDailyCheckIn, updateValidationItem,
     listDirectory, getDirectoryUser, listTransitions, createTransition, updateTransitionById,
-    getDirectorySource, syncDirectory, syncDirectoryFromPastedCsv,
+    getDirectorySource, syncDirectory, syncDirectoryFromPastedCsv, uploadDirectoryDoc,
     buildAssets, findAnswer, exportBrainroomJSON, buildMailto,
   };
 })();
