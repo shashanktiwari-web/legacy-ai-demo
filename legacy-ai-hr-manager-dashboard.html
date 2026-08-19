@@ -409,8 +409,8 @@ function sendRealEmail(id){
     + `Open it here (demo link — open the employee validation dashboard in your browser):\n`
     + `${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html')}\n\n`
     + `Please review, confirm, or correct anything before it goes to your manager for approval.`;
-  window.location.href = LegacyAIState.buildMailto(to, subject, body);
-  showToast(`Opening a real email draft to ${to} — hit send in your email app to actually deliver it.`);
+  window.open(LegacyAIState.buildMailto(to, subject, body), '_blank');
+  showToast(`Opening a real Gmail draft to ${to} in a new tab — hit send there to actually deliver it.`);
 }
 
 // Demo-day option: real mailto: draft that kicks off the transition with
@@ -428,8 +428,8 @@ function sendInitiationEmail(id){
     + `Open it here (demo link — open the employee validation dashboard in your browser):\n`
     + `${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html')}\n\n`
     + `This link only works for the email address the transition was raised against.`;
-  window.location.href = LegacyAIState.buildMailto(to, subject, body);
-  showToast(`Opening a real initiation email draft to ${to} — hit send in your email app to actually deliver it.`);
+  window.open(LegacyAIState.buildMailto(to, subject, body), '_blank');
+  showToast(`Opening a real Gmail initiation draft to ${to} in a new tab — hit send there to actually deliver it.`);
 }
 
 function toggleForm(){
@@ -499,13 +499,21 @@ function onEmployeePicked(){
   const u = directory.find(d => d.email === email);
   if(!u){ preview.classList.remove('show'); return; }
   const manager = directory.find(d => d.email === u.managerEmail);
-  const docRow = (label, link) => `<div class="row"><b>${label}</b> ${link ? `<a href="${link}" target="_blank">${link}</a>` : '<span class="missing">not on file</span>'}</div>`;
+  const docRow = (label, field, link) => {
+    if (link) return `<div class="row"><b>${label}</b> <a href="${link}" target="_blank">${link}</a></div>`;
+    return `<div class="row"><b>${label}</b> <span class="missing">not on file</span>
+      <label class="btn sm" style="margin-left:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+        <i class="ti ti-upload"></i> Upload
+        <input type="file" style="display:none" onchange="uploadMissingDoc('${u.email}','${field}',this)">
+      </label>
+    </div>`;
+  };
   preview.innerHTML = `
     <div class="row"><b>Manager (auto)</b> ${manager ? `${manager.name} (${manager.email})` : (u.managerEmail || '<span class="missing">no manager on file</span>')}</div>
-    ${docRow('Self-review Q1', u.q1Link)}
-    ${docRow('Self-review Q2', u.q2Link)}
-    ${docRow('Self-review Q3', u.q3Link)}
-    ${docRow('Manager expectations doc', u.expLink)}
+    ${docRow('Self-review Q1', 'q1Link', u.q1Link)}
+    ${docRow('Self-review Q2', 'q2Link', u.q2Link)}
+    ${docRow('Self-review Q3', 'q3Link', u.q3Link)}
+    ${docRow('Manager expectations doc', 'expLink', u.expLink)}
   `;
   preview.classList.add('show');
 }
@@ -528,6 +536,21 @@ async function saveTransition(){
   document.getElementById('directoryPreview').classList.remove('show');
   await loadTransitions();
   sendInitiationEmail(created.id);
+}
+
+async function uploadMissingDoc(email, field, inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  if(!file) return;
+  try {
+    showToast(`Uploading ${file.name}…`);
+    const result = await LegacyAIState.uploadDirectoryDoc(email, field, file);
+    const u = directory.find(d => d.email === email);
+    if(u) u[field] = result.url;
+    showToast(`Uploaded ${file.name} — doc link saved.`);
+    onEmployeePicked();
+  } catch (e) {
+    showToast('Upload failed: ' + e.message);
+  }
 }
 
 function showToast(msg){
