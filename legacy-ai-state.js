@@ -30,13 +30,23 @@ const LegacyAIState = (() => {
     sessionStorage.setItem(SESSION_KEY, id);
   }
 
-  // Builds an absolute URL (not just a relative path) — required because
+    // Builds an absolute URL (not just a relative path) — required because
   // this same helper is used both for in-app <a href> links (where a
   // relative path would work fine) AND for links dropped into real email
   // bodies (where a relative path is meaningless — the recipient's email
   // client has no "current page" to resolve it against).
-  function linkTo(page) {
-    return `${window.location.origin}/${page}?tr=${encodeURIComponent(currentTransitionId())}`;
+  //
+  // `trId` is optional and should be passed explicitly whenever the caller
+  // already knows which transition it's linking to (e.g. the HR/manager
+  // dashboard, which lists many transitions at once and is never loaded
+  // with its own `?tr=`). Without it, this silently falls back to
+  // currentTransitionId() — whatever's in the URL/sessionStorage of the
+  // CURRENT page, or the hardcoded demo default — which is wrong for a
+  // multi-transition list view and was sending people to the wrong
+  // person's data.
+  function linkTo(page, trId) {
+    const id = trId || currentTransitionId();
+    return `${window.location.origin}/${page}?tr=${encodeURIComponent(id)}`;
   }
 
   // ---------------------------------------------------------------------
