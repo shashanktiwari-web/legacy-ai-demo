@@ -38,7 +38,6 @@ const LegacyAIState = (() => {
   function linkTo(page) {
     return `${window.location.origin}/${page}?tr=${encodeURIComponent(currentTransitionId())}`;
   }
-  }
 
   // ---------------------------------------------------------------------
   // Thin fetch helpers
