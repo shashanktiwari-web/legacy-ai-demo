@@ -143,7 +143,7 @@ function sendRealEmailToSuccessor(){
     + `If you don't open it by 6 PM, you'll get a reminder email every evening until Day 10 is done.\n\n`
     + `Open it here (demo link — open the successor companion in your browser):\n`
     + `${LegacyAIState.linkTo('legacy-ai-successor-companion.html')}`;
-  window.location.href = LegacyAIState.buildMailto(to, subject, body);
+    window.open(LegacyAIState.buildMailto(to, subject, body), '_blank');
 }
 
 function showToastFallback(msg){ alert(msg); }
