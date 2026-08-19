@@ -207,6 +207,22 @@ function userByEmail(email) {
   return db.prepare('SELECT * FROM users WHERE email = ?').get(email) || null;
 }
 
+const DOC_FIELD_TO_COLUMN = {
+  q1Link: 'q1_link', q2Link: 'q2_link', q3Link: 'q3_link', expLink: 'exp_link',
+};
+
+// Points one of a user's doc-link columns at a freshly uploaded file
+// instead of a Google Doc link — used when there's nothing to paste a
+// link for. `field` is the client-facing name (q1Link/q2Link/q3Link/
+// expLink); `url` is wherever the uploaded file now lives (e.g. /uploads/...).
+function updateUserDocLink(email, field, url) {
+  const column = DOC_FIELD_TO_COLUMN[field];
+  if (!column) throw new Error(`Unknown doc field "${field}" — expected one of ${Object.keys(DOC_FIELD_TO_COLUMN).join(', ')}.`);
+  const result = db.prepare(`UPDATE users SET ${column} = ? WHERE email = ?`).run(url, email);
+  if (result.changes === 0) throw new Error('Unknown employee email — not found in directory.');
+  return userByEmail(email);
+}
+
 function listUsers() {
   return db.prepare('SELECT * FROM users ORDER BY name').all();
 }
@@ -502,4 +518,5 @@ module.exports = {
   setSetting,
   syncDirectoryFromCsv,
   syncDirectoryFromPastedCsv,
+  updateUserDocLink,
 };
