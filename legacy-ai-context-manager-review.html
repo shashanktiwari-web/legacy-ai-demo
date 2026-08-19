@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Legacy AI — Context Capture: Manager Review</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css" />
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#ffffff; --border:#e3e5e9; --border-strong:#c7cad1;
+    --text:#1b1e24; --text-2:#5b616e; --text-3:#8a8f99;
+    --accent:#3b5bfd; --accent-bg:#eaeeff;
+    --green:#1d9e75; --green-bg:#e1f5ee;
+    --purple:#534ab7; --purple-bg:#eeedfe;
+    --amber:#ba7517; --amber-bg:#faeeda;
+    --red:#c93b3b; --red-bg:#fcebeb;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:960px;margin:0 auto;padding:28px 32px 60px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:16px;}
+  .tag{font-size:12px;font-weight:600;color:var(--purple);background:var(--purple-bg);padding:3px 10px;border-radius:999px;}
+  h1{font-size:22px;font-weight:600;margin:8px 0 4px;}
+  .sub{color:var(--text-2);font-size:14px;margin:0;}
+  .identity{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;}
+  .avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-bg);color:#2a3fbf;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;}
+  .identity .name{font-weight:600;font-size:14px;}
+  .identity .role{font-size:12.5px;color:var(--text-2);}
+
+  .banner{display:flex;align-items:center;gap:10px;background:var(--amber-bg);border:1px solid #f0d9ac;color:#7a4d0c;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:20px;}
+  .banner.done{background:var(--green-bg);border-color:#bfe6d7;color:#116349;}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px;}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+  .stat .num{font-size:26px;font-weight:600;}
+  .stat .lbl{font-size:13px;color:var(--text-2);margin-top:2px;}
+
+  .qa-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:14px;}
+  .qa-card.flagged{border-color:#f3c7c7;background:#fff9f9;}
+  .qa-card.approved{border-color:#bfe6d7;}
+  .item-ref{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#2a3fbf;background:var(--accent-bg);padding:3px 9px;border-radius:999px;margin-bottom:10px;}
+  .qa-q{font-size:13px;color:var(--text-2);margin-bottom:8px;}
+  .qa-a{font-size:14px;line-height:1.55;margin-bottom:12px;}
+  .qa-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .status-pill{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;}
+  .st-pending{background:var(--gray-bg, #f1efe8);color:#514f49;}
+  .st-approved{background:var(--green-bg);color:var(--green);}
+  .st-flagged{background:var(--red-bg);color:#8c2a2a;}
+  .row-btns{display:flex;gap:6px;}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;padding:7px 12px;border-radius:8px;cursor:pointer;}
+  .btn:hover{background:#f0f1f3;}
+  .btn.primary{background:var(--text);color:#fff;border-color:var(--text);}
+  .btn.primary:hover{background:#000;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn.sm{padding:5px 10px;font-size:12px;}
+  .flag-note{margin-top:10px;}
+  .flag-note textarea{width:100%;min-height:60px;border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical;}
+  .flag-note .lbl{font-size:12px;font-weight:600;color:#8c2a2a;margin-bottom:5px;display:block;}
+
+  .cta{display:flex;justify-content:flex-end;margin-top:20px;}
+  .footnote{font-size:12px;color:var(--text-3);margin-top:14px;}
+  .empty-state{padding:40px 24px;text-align:center;color:var(--text-2);font-size:13.5px;background:var(--surface);border:1px solid var(--border);border-radius:12px;}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#1b1e24;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;max-width:520px;text-align:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div>
+      <span class="tag">LEGACY AI · DAY0 HACKATHON · STEP 2B</span>
+      <h1>Context capture — manager review</h1>
+      <p class="sub" id="headerSub">Loading…</p>
+    </div>
+    <div class="identity">
+      <div class="avatar" id="mgrAvatar">—</div>
+      <div>
+        <div class="name" id="mgrName">—</div>
+        <div class="role" id="mgrRole">Manager</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="banner" id="banner">
+    <i class="ti ti-shield-check"></i>
+    <span>Every answer needs your sign-off before Legacy AI builds the knowledge pack from it — this is what keeps the pack fool-proof.</span>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div id="cards"></div>
+
+  <div class="cta">
+    <button class="btn primary" id="approveAllBtn" disabled onclick="goToKnowledgePack()"><i class="ti ti-arrow-right"></i> Approve all &amp; build knowledge pack</button>
+  </div>
+  <p class="footnote">Flagged answers block progress — the employee needs to revise a flagged item before the pack can be generated.</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="legacy-ai-state.js"></script>
+<script>
+let _state = null;
+let items = [];
+
+function renderStats(){
+  const total = items.length;
+  const approved = items.filter(i=>i.status==='approved').length;
+  const flagged = items.filter(i=>i.status==='flagged').length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="num">${total}</div><div class="lbl">Answers submitted</div></div>
+    <div class="stat"><div class="num">${approved}</div><div class="lbl">Approved by manager</div></div>
+    <div class="stat"><div class="num">${flagged}</div><div class="lbl">Flagged for revision</div></div>
+  `;
+  const allApproved = items.length > 0 && items.every(i=>i.status==='approved');
+  const btn = document.getElementById('approveAllBtn');
+  btn.disabled = !allApproved;
+  const banner = document.getElementById('banner');
+  if(items.length === 0){
+    banner.className = 'banner';
+    banner.style.background = ''; banner.style.borderColor=''; banner.style.color='';
+    banner.innerHTML = `<i class="ti ti-info-circle"></i><span>No context-capture answers submitted yet — nothing to review.</span>`;
+  } else if(allApproved){
+    banner.className = 'banner done';
+    banner.innerHTML = `<i class="ti ti-circle-check"></i><span>All ${total} answers approved. Ready to build the knowledge pack.</span>`;
+  } else if(flagged > 0){
+    banner.className = 'banner';
+    banner.style.background = '#fcebeb'; banner.style.borderColor = '#f3c7c7'; banner.style.color = '#8c2a2a';
+    banner.innerHTML = `<i class="ti ti-alert-triangle"></i><span>${flagged} answer${flagged>1?'s':''} flagged — ${_state.employee.name} needs to revise before the knowledge pack can be built.</span>`;
+  } else {
+    banner.className = 'banner';
+    banner.style.background = ''; banner.style.borderColor=''; banner.style.color='';
+    banner.innerHTML = `<i class="ti ti-shield-check"></i><span>Every answer needs your sign-off before Legacy AI builds the knowledge pack from it — this is what keeps the pack fool-proof.</span>`;
+  }
+}
+
+function renderCards(){
+  const el = document.getElementById('cards');
+  if(items.length === 0){
+    el.innerHTML = `<div class="empty-state">Nothing here yet — this transition either hasn't started context capture, or no answers have been submitted.</div>`;
+    return;
+  }
+  el.innerHTML = items.map((it, idx) => {
+    const pillMap = {pending:['st-pending','Pending review'], approved:['st-approved','Approved'], flagged:['st-flagged','Flagged']};
+    const [cls, label] = pillMap[it.status];
+    let cardClass = it.status==='flagged' ? 'flagged' : it.status==='approved' ? 'approved' : '';
+    let actions = '';
+    if(it.status==='pending'){
+      actions = `<div class="row-btns">
+        <button class="btn sm primary" onclick="approve(${idx})"><i class="ti ti-check"></i> Approve</button>
+        <button class="btn sm" onclick="showFlag(${idx})"><i class="ti ti-flag"></i> Flag for revision</button>
+      </div>`;
+    } else if(it.status==='flagged'){
+      actions = `<div class="row-btns">
+        <button class="btn sm" onclick="approve(${idx})"><i class="ti ti-check"></i> Approve instead</button>
+      </div>`;
+    } else {
+      actions = `<div class="row-btns"><button class="btn sm" onclick="resetItem(${idx})">Undo</button></div>`;
+    }
+    const flagBox = it.showFlagBox ? `<div class="flag-note">
+        <label class="lbl">What needs to change?</label>
+        <textarea id="note-${idx}" placeholder="e.g. Double-check the NPCI sign-off timeline with compliance before we publish this.">${it.note||''}</textarea>
+        <div style="margin-top:8px;"><button class="btn sm primary" onclick="submitFlag(${idx})">Submit flag</button> <button class="btn sm" onclick="cancelFlag(${idx})">Cancel</button></div>
+      </div>` : (it.status==='flagged' && it.note ? `<div class="flag-note"><label class="lbl">Manager note</label><div style="font-size:13px;">${it.note}</div></div>` : '');
+    return `
+      <div class="qa-card ${cardClass}">
+        <span class="item-ref"><i class="ti ti-sparkles"></i> ${it.item}</span>
+        <div class="qa-q">${it.q}</div>
+        <div class="qa-a">${it.a}</div>
+        <div class="qa-actions">
+          <span class="status-pill ${cls}">${label}</span>
+          ${actions}
+        </div>
+        ${flagBox}
+      </div>
+    `;
+  }).join('');
+}
+
+async function approve(idx){
+  items[idx].status='approved'; items[idx].showFlagBox=false;
+  await LegacyAIState.saveContextReview(items[idx].item, 'approved', '');
+  renderAll(); showToast('Answer approved.');
+}
+function showFlag(idx){ items[idx].showFlagBox = true; renderAll(); }
+function cancelFlag(idx){ items[idx].showFlagBox = false; renderAll(); }
+async function submitFlag(idx){
+  const note = document.getElementById('note-'+idx).value.trim();
+  if(!note){ showToast('Add a short note on what needs to change.'); return; }
+  items[idx].status='flagged'; items[idx].note = note; items[idx].showFlagBox=false;
+  await LegacyAIState.saveContextReview(items[idx].item, 'flagged', note);
+  renderAll();
+  showToast(`Flagged — ${_state.employee.name} will need to revise this answer.`);
+}
+async function resetItem(idx){
+  items[idx].status='pending'; items[idx].note='';
+  await LegacyAIState.saveContextReview(items[idx].item, 'pending', '');
+  renderAll();
+}
+
+function renderAll(){ renderStats(); renderCards(); }
+
+function goToKnowledgePack(){
+  if(document.getElementById('approveAllBtn').disabled) return;
+  showToast('All answers approved — building knowledge pack...');
+  setTimeout(()=>{ window.location.href = LegacyAIState.linkTo('legacy-ai-knowledge-pack.html'); }, 700);
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+async function init(){
+  _state = await LegacyAIState.get();
+  items = _state.contextQuestions.map(q => {
+    const answer = _state.contextAnswers.find(a => a.item === q.item);
+    const review = _state.contextReview.find(r => r.item === q.item);
+    return {
+      item: q.item,
+      q: q.q,
+      a: answer ? answer.a : q.dummy,
+      status: review ? review.status : 'pending',
+      note: review ? review.note : '',
+    };
+  });
+  document.getElementById('headerSub').textContent = `${_state.employee.name}'s ${items.length} context-capture answer${items.length===1?'':'s'}, reviewed before they become part of the knowledge pack.`;
+  document.getElementById('mgrAvatar').textContent = _state.manager.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('mgrName').textContent = _state.manager.name;
+  document.getElementById('mgrRole').textContent = `Manager · ${_state.transitionId}`;
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>

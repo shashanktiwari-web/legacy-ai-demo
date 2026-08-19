@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Legacy AI — HR / Manager Transition Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css" />
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#ffffff; --border:#e3e5e9; --border-strong:#c7cad1;
+    --text:#1b1e24; --text-2:#5b616e; --text-3:#8a8f99;
+    --accent:#3b5bfd; --accent-bg:#eaeeff;
+    --green:#1d9e75; --green-bg:#e1f5ee;
+    --amber:#ba7517; --amber-bg:#faeeda;
+    --red:#c93b3b; --red-bg:#fcebeb;
+    --gray:#5f5e5a; --gray-bg:#f1efe8;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:1280px;margin:0 auto;padding:28px 32px 60px;}
+  .center-wrap{max-width:520px;margin:70px auto;padding:0 20px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:16px;}
+  .topbar .tag{font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-bg);padding:3px 10px;border-radius:999px;letter-spacing:.02em;}
+  h1{font-size:22px;font-weight:600;margin:8px 0 4px;}
+  .sub{color:var(--text-2);font-size:14px;margin:0;}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:14px;font-weight:500;padding:9px 14px;border-radius:8px;cursor:pointer;transition:.15s;}
+  .btn:hover{background:#f0f1f3;}
+  .btn.primary{background:var(--text);color:#fff;border-color:var(--text);}
+  .btn.primary:hover{background:#000;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn.sm{padding:6px 10px;font-size:12.5px;}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+  .stat .num{font-size:26px;font-weight:600;}
+  .stat .lbl{font-size:13px;color:var(--text-2);margin-top:2px;}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;}
+  input[type=text], select{border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:13.5px;background:#fff;color:var(--text);}
+  input[type=text]{min-width:220px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:left;font-weight:600;color:var(--text-2);font-size:12px;text-transform:uppercase;letter-spacing:.03em;padding:10px 14px;border-bottom:1px solid var(--border);background:#fafbfc;white-space:nowrap;}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;color:var(--text-2);}
+  .emp{font-weight:600;}
+  .role-chain{color:var(--text-2);font-size:12.5px;}
+  .role-chain b{color:var(--text);font-weight:500;}
+
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+  .badge.resign{background:var(--red-bg);color:#8c2a2a;}
+  .badge.ijp{background:var(--accent-bg);color:#2a3fbf;}
+  .badge.pip{background:var(--amber-bg);color:var(--amber);}
+
+  .status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;}
+  .status.draft{background:var(--gray-bg);color:#514f49;}
+  .status.awaiting{background:var(--amber-bg);color:var(--amber);}
+  .status.ready{background:var(--green-bg);color:var(--green);}
+  .status.sent{background:var(--accent-bg);color:#2a3fbf;}
+  .status.done{background:#eef0f2;color:#3a3d44;}
+
+  .docs{display:flex;gap:6px;}
+  .doc-dot{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;border:1px solid var(--border);color:var(--text-3);position:relative;}
+  .doc-dot.filled{background:var(--green-bg);color:var(--green);border-color:transparent;}
+  .doc-dot .tip{visibility:hidden;position:absolute;bottom:26px;left:50%;transform:translateX(-50%);background:#1b1e24;color:#fff;font-size:11px;padding:4px 7px;border-radius:5px;white-space:nowrap;}
+  .doc-dot:hover .tip{visibility:visible;}
+
+  .trigger-missing{color:var(--amber);font-size:12.5px;font-style:italic;}
+  .trigger-date{font-weight:500;}
+
+  .form-panel{display:none;padding:18px;border-bottom:1px solid var(--border);background:#fafbfc;}
+  .form-panel.open{display:block;}
+  .form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:12px;font-weight:600;color:var(--text-2);}
+  .field input, .field select{width:100%;}
+  .help{grid-column:1/-1;font-size:12px;color:var(--text-3);background:#fff;border:1px dashed var(--border-strong);border-radius:8px;padding:8px 10px;}
+  .form-actions{margin-top:14px;display:flex;gap:8px;}
+
+  .directory-preview{grid-column:1/-1;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--text-2);display:none;}
+  .directory-preview.show{display:block;}
+  .directory-preview .row{display:flex;gap:6px;margin-bottom:4px;}
+  .directory-preview b{color:var(--text);min-width:150px;display:inline-block;}
+  .directory-preview a{color:var(--accent);text-decoration:none;}
+  .directory-preview .missing{color:var(--amber);font-style:italic;}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#1b1e24;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .footnote{margin-top:14px;font-size:12px;color:var(--text-3);}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 24px;}
+  .role-tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .role-tab{flex:1;text-align:center;border:1px solid var(--border-strong);border-radius:8px;padding:10px;font-size:13.5px;font-weight:500;cursor:pointer;background:#fff;}
+  .role-tab.active{background:var(--text);color:#fff;border-color:var(--text);}
+  .field2{display:flex;flex-direction:column;gap:5px;margin-top:14px;}
+  .field2 label{font-size:12.5px;font-weight:600;color:var(--text-2);}
+
+  .identity{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;}
+  .avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-bg);color:#2a3fbf;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;}
+  .identity .name{font-weight:600;font-size:14px;}
+  .identity .role{font-size:12.5px;color:var(--text-2);}
+  .identity-row{display:flex;align-items:center;gap:8px;}
+</style>
+</head>
+<body>
+
+<!-- SCREEN: login -->
+<div class="center-wrap" id="screenLogin">
+  <span class="tag">LEGACY AI · DAY0 HACKATHON</span>
+  <h1>Log in to the transition dashboard</h1>
+  <p class="sub">Access is scoped by role — HR sees every transition, a manager only sees their own reports.</p>
+  <div class="card" style="margin-top:16px;">
+    <div class="role-tabs">
+      <div class="role-tab active" id="tabHR" onclick="selectRole('hr')">I'm from HR</div>
+      <div class="role-tab" id="tabManager" onclick="selectRole('manager')">I'm a manager</div>
+    </div>
+
+    <div id="hrLoginFields">
+      <div class="field2"><label>Work email</label><input type="text" id="hrEmail" placeholder="e.g. priya.hr@razorpay.com" style="width:100%;"></div>
+      <p class="footnote">HR logins can see and trigger every transition in the system.</p>
+    </div>
+
+    <div id="managerLoginFields" style="display:none;">
+      <div class="field2">
+        <label>You are</label>
+        <select id="managerSelect" style="width:100%;"></select>
+      </div>
+      <div class="field2">
+        <label>Confirm your work email</label>
+        <input type="text" id="managerEmail" placeholder="e.g. name@razorpay.com" style="width:100%;">
+      </div>
+      <p class="footnote">You'll only see transitions where you're listed as the manager in the directory.</p>
+    </div>
+
+    <div style="margin-top:18px;"><button class="btn primary" onclick="login()"><i class="ti ti-login"></i> Continue</button></div>
+  </div>
+</div>
+
+<!-- SCREEN: dashboard -->
+<div class="wrap" id="screenDashboard" style="display:none;">
+
+  <div class="topbar">
+    <div>
+      <span class="tag">LEGACY AI · DAY0 HACKATHON</span>
+      <h1>Transition dashboard</h1>
+      <p class="sub" id="scopeSub">HR / manager view — initiate, track, and gate every role transition before it reaches the employee.</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="identity">
+        <div class="avatar" id="idAvatar">HR</div>
+        <div class="identity-row">
+          <div>
+            <div class="name" id="idName">HR admin</div>
+            <div class="role" id="idRole">Sees all transitions</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn sm" onclick="logout()"><i class="ti ti-logout-2"></i> Switch user</button>
+    </div>
+  </div>
+
+  <div class="topbar" style="margin-top:-10px;">
+    <div class="sub" style="font-size:12.5px; display:flex; align-items:center; gap:8px;" id="directoryStatusLine"></div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" onclick="toggleDirectoryPanel()"><i class="ti ti-refresh"></i> Directory source</button>
+      <button class="btn primary" onclick="toggleForm()"><i class="ti ti-plus"></i> New transition</button>
+    </div>
+  </div>
+  <div class="form-panel" id="directoryPanel" style="margin-bottom:22px; border:1px solid var(--border); border-radius:12px;">
+    <div class="form-grid">
+      <div class="field" style="grid-column:1/-1;">
+        <label>Published Google Sheet CSV link</label>
+        <input type="text" id="csvUrlInput" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv">
+      </div>
+      <div class="help"><i class="ti ti-info-circle"></i> In the Sheet: File → Share → Publish to web → select the Directory tab → CSV → Publish, then paste that link here. If your Workspace admin blocks public/external sharing (common on managed accounts — you'll see a "publishOutNotPermitted" error), this link won't work no matter how you publish it. Use "Paste sheet data" below instead.</div>
+
+      <div class="field" style="grid-column:1/-1; margin-top:8px;">
+        <label>Or paste sheet data directly (works even when public sharing is blocked)</label>
+        <textarea id="csvPasteInput" rows="5" style="width:100%; font-family:monospace; font-size:12.5px;" placeholder="email,name,title,manager_email,is_hr,q1_link,q2_link,q3_link,exp_link&#10;jane.doe@razorpay.com,Jane Doe,PM,manager@razorpay.com,0,,,,"></textarea>
+      </div>
+      <div class="help"><i class="ti ti-info-circle"></i> Header row must be exactly: <code>email, name, title, manager_email, is_hr, q1_link, q2_link, q3_link, exp_link</code>. Ask Claude to read the Sheet and give you this text to paste. Either sync method adds/updates people by email — it never deletes anyone, even if a row disappears.</div>
+    </div>
+    <div class="form-actions">
+      <button class="btn primary" onclick="syncDirectoryNow()"><i class="ti ti-cloud-download"></i> Sync from link</button>
+      <button class="btn primary" onclick="syncDirectoryFromPaste()"><i class="ti ti-clipboard"></i> Sync from pasted data</button>
+      <button class="btn" onclick="toggleDirectoryPanel()">Close</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="panel">
+    <div class="form-panel" id="formPanel">
+      <div class="form-grid">
+        <div class="field" style="grid-column:1/-1;">
+          <label>Employee — picked directly from the user directory</label>
+          <select id="f-employee" onchange="onEmployeePicked()">
+            <option value="">Select an employee…</option>
+          </select>
+        </div>
+
+        <div class="directory-preview" id="directoryPreview"></div>
+
+        <div class="field"><label>Transition type</label>
+          <select id="f-type"><option value="resign">Resignation</option><option value="ijp">Internal move (IJP)</option><option value="pip">PIP transition</option></select>
+        </div>
+        <div class="field"><label>Trigger date (last working day)</label><input type="text" id="f-trigger" placeholder="Leave blank if not set in HR tool"></div>
+
+        <div class="help"><i class="ti ti-info-circle"></i> Manager and self-review / manager-expectations doc links are pulled straight from the user directory once you pick the employee above — nothing to paste by hand. Trigger date still comes from the HR tool; leave it blank if that field is empty and this transition will sit in <b>Awaiting HR tool date</b>.</div>
+        <div class="help"><i class="ti ti-mail"></i> Clicking "Save transition" immediately opens a real email draft (your own mail client) to the employee's directory email, initiating the process. Nothing sends automatically — you click send yourself.</div>
+      </div>
+      <div class="form-actions">
+        <button class="btn primary" onclick="saveTransition()"><i class="ti ti-check"></i> Save transition</button>
+        <button class="btn" onclick="toggleForm()">Cancel</button>
+      </div>
+    </div>
+
+    <div class="panel-head">
+      <div class="filters">
+        <input type="text" id="search" placeholder="Search employee or manager..." oninput="render()">
+        <select id="statusFilter" onchange="render()">
+          <option value="">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="awaiting">Awaiting HR tool date</option>
+          <option value="ready">Ready to notify</option>
+          <option value="sent">Sent to employee</option>
+          <option value="done">Completed</option>
+        </select>
+      </div>
+      <div class="sub" style="font-size:12.5px;">Sending is disabled until trigger date + all four directory documents are present</div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Transition ID</th>
+          <th>Employee</th>
+          <th>Manager</th>
+          <th>Successor</th>
+          <th>Type</th>
+          <th>Trigger date</th>
+          <th>Status</th>
+          <th>Documents</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <p class="footnote">Documents key — hover the icons in each row: <b>Q1 / Q2 / Q3</b> self-review links, <b>M</b> manager handover-expectations doc — all sourced from the employee's directory record.</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="legacy-ai-state.js"></script>
+<script>
+let data = [];
+let directory = [];
+
+const statusLabel = {draft:'Draft', awaiting:'Awaiting HR tool date', ready:'Ready to notify', sent:'Sent to employee', done:'Completed'};
+const typeLabel = {resign:'Resignation', ijp:'Internal move', pip:'PIP transition'};
+
+let session = { role: null, managerEmail: null };
+
+// A "manager" for login purposes is anyone the directory lists as someone
+// else's manager — computed from real directory data, not a fixed list.
+function uniqueManagers(){
+  const managerEmails = new Set(directory.map(u => u.managerEmail).filter(Boolean));
+  return directory.filter(u => managerEmails.has(u.email));
+}
+
+function selectRole(role){
+  document.getElementById('tabHR').classList.toggle('active', role==='hr');
+  document.getElementById('tabManager').classList.toggle('active', role==='manager');
+  document.getElementById('hrLoginFields').style.display = role==='hr' ? 'block' : 'none';
+  document.getElementById('managerLoginFields').style.display = role==='manager' ? 'block' : 'none';
+  if(role==='manager'){
+    const sel = document.getElementById('managerSelect');
+    if(sel.options.length===0){
+      uniqueManagers().forEach(m=>{
+        const opt = document.createElement('option');
+        opt.value = m.email; opt.textContent = `${m.name} (${m.email})`;
+        sel.appendChild(opt);
+      });
+    }
+  }
+  session._pendingRole = role;
+}
+
+function initials(name){
+  return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+}
+
+async function login(){
+  const role = session._pendingRole || 'hr';
+  if(role==='hr'){
+    const email = document.getElementById('hrEmail').value.trim().toLowerCase();
+    if(!email || !email.includes('@')){ showToast('Enter your work email to continue.'); return; }
+    if(!email.endsWith('@razorpay.com')){ showToast('Only razorpay.com email addresses can access this dashboard.'); return; }
+    session.role = 'hr';
+    session.managerEmail = null;
+    document.getElementById('idAvatar').textContent = 'HR';
+    document.getElementById('idName').textContent = 'HR admin';
+    document.getElementById('idRole').textContent = 'Sees all transitions';
+    document.getElementById('scopeSub').textContent = 'HR view — every transition in the system, regardless of manager.';
+  } else {
+    const mEmail = document.getElementById('managerEmail').value.trim().toLowerCase();
+    if(!mEmail || !mEmail.includes('@')){ showToast('Enter your work email to continue.'); return; }
+    if(!mEmail.endsWith('@razorpay.com')){ showToast('Only razorpay.com email addresses can access this dashboard.'); return; }
+    const selectedEmail = document.getElementById('managerSelect').value;
+    if(mEmail !== selectedEmail){ showToast('That email does not match the manager you selected — check and try again.'); return; }
+    const m = directory.find(u => u.email === selectedEmail);
+    session.role = 'manager';
+    session.managerEmail = selectedEmail;
+    document.getElementById('idAvatar').textContent = initials(m ? m.name : selectedEmail);
+    document.getElementById('idName').textContent = m ? m.name : selectedEmail;
+    document.getElementById('idRole').textContent = 'Manager view — own reports only';
+    document.getElementById('scopeSub').textContent = `Manager view — showing only transitions where ${m ? m.name : selectedEmail} is the manager.`;
+  }
+  document.getElementById('screenLogin').style.display = 'none';
+  document.getElementById('screenDashboard').style.display = 'block';
+  await loadTransitions();
+}
+
+function logout(){
+  session = { role: null, managerEmail: null };
+  document.getElementById('screenDashboard').style.display = 'none';
+  document.getElementById('screenLogin').style.display = 'block';
+}
+
+function docDot(label, filled){
+  return `<div class="doc-dot ${filled?'filled':''}">${label}<span class="tip">${label==='M'?'Manager expectations':'Self-review '+label} ${filled?'received':'missing'}</span></div>`;
+}
+
+async function loadTransitions(){
+  data = await LegacyAIState.listTransitions(session.role==='manager' ? session.managerEmail : null);
+  render();
+}
+
+function renderStats(){
+  const total = data.length;
+  const awaiting = data.filter(r=>r.status==='awaiting').length;
+  const ready = data.filter(r=>r.status==='ready').length;
+  const done = data.filter(r=>r.status==='done').length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="num">${total}</div><div class="lbl">${session.role==='manager' ? 'Your reports\' transitions' : 'Active transitions'}</div></div>
+    <div class="stat"><div class="num">${awaiting}</div><div class="lbl">Awaiting HR tool date</div></div>
+    <div class="stat"><div class="num">${ready}</div><div class="lbl">Ready to notify employee</div></div>
+    <div class="stat"><div class="num">${done}</div><div class="lbl">Completed</div></div>
+  `;
+}
+
+function render(){
+  renderStats();
+  const q = document.getElementById('search').value.toLowerCase();
+  const sf = document.getElementById('statusFilter').value;
+  const tbody = document.getElementById('rows');
+  tbody.innerHTML = '';
+  if(data.length===0){
+    tbody.innerHTML = `<tr><td colspan="9" class="footnote" style="text-align:center; padding:24px;">No transitions found yet.</td></tr>`;
+    return;
+  }
+  data.forEach((row)=>{
+    if(q && !(row.employeeName.toLowerCase().includes(q) || row.managerName.toLowerCase().includes(q))) return;
+    if(sf && sf!==row.status) return;
+    const canSend = row.status==='ready';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="id">${row.id}</td>
+      <td class="emp">${row.employeeName}</td>
+      <td>${row.managerName}</td>
+      <td>${row.successorName || '<span class="footnote" style="margin:0;">not assigned yet</span>'}</td>
+      <td><span class="badge ${row.type}">${typeLabel[row.type]}</span></td>
+      <td>${row.triggerDate ? `<span class="trigger-date">${row.triggerDate}</span>` : `<span class="trigger-missing">not set in HR tool</span>`}</td>
+      <td><span class="status ${row.status}">${statusLabel[row.status]}</span></td>
+      <td><div class="docs">${docDot('Q1',row.q1)}${docDot('Q2',row.q2)}${docDot('Q3',row.q3)}${docDot('M',row.exp)}</div></td>
+      <td>${row.status==='sent' ? `<a href="${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html')}" target="_blank" class="btn sm"><i class="ti ti-external-link"></i> Preview employee link</a>` : row.status==='done' ? `<span class="footnote" style="margin:0;">—</span>` : `<div style="display:flex; gap:4px;"><button class="btn sm" onclick="sendInitiationEmail('${row.id}')" title="Real email: kick off this transition with the employee"><i class="ti ti-rocket"></i></button><button class="btn sm ${canSend?'primary':''}" ${canSend?'':'disabled'} onclick="sendToEmployee('${row.id}')"><i class="ti ti-mail"></i> Notify employee</button><button class="btn sm" ${canSend?'':'disabled'} onclick="sendRealEmail('${row.id}')" title="Opens a real mailto: draft for demo day"><i class="ti ti-send"></i></button></div>`}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function rowById(id){ return data.find(r => r.id === id); }
+
+async function sendToEmployee(id){
+  await LegacyAIState.updateTransitionById(id, { status: 'sent' });
+  await loadTransitions();
+  const row = rowById(id);
+  showToast(`Handover dashboard link emailed to ${row ? row.employeeName : id}. Employee has 10 working days to validate. Use "Preview employee link" to see what they'll see.`);
+}
+
+// Demo-day option: opens a real mailto: draft instead of just the mock
+// "Notify employee" toast above. No backend email sending — you type the
+// real recipient (defaulted to the directory address) and hit send
+// yourself in your own email app.
+function sendRealEmail(id){
+  const row = rowById(id);
+  if(!row) return;
+  const to = prompt(`Send the real "handover dashboard ready" email to:`, row.employeeEmail);
+  if(!to) return;
+  const subject = `Your handover dashboard is ready — action needed within 10 working days`;
+  const body = `Hi ${row.employeeName.split(' ')[0]},\n\n`
+    + `Your manager, ${row.managerName}, has initiated your role transition (${row.id}). `
+    + `We've pre-built your handover dashboard from your self-reviews and manager expectations doc — most of it is already filled in.\n\n`
+    + `Open it here (demo link — open the employee validation dashboard in your browser):\n`
+    + `${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html')}\n\n`
+    + `Please review, confirm, or correct anything before it goes to your manager for approval.`;
+  window.location.href = LegacyAIState.buildMailto(to, subject, body);
+  showToast(`Opening a real email draft to ${to} — hit send in your email app to actually deliver it.`);
+}
+
+// Demo-day option: real mailto: draft that kicks off the transition with
+// the employee — distinct from sendRealEmail() above, which is the later
+// "handover dashboard ready" moment once docs + trigger date are in.
+function sendInitiationEmail(id){
+  const row = rowById(id);
+  if(!row) return;
+  const to = prompt(`Send the real "transition initiated" email to:`, row.employeeEmail);
+  if(!to) return;
+  const subject = `Your ${typeLabel[row.type].toLowerCase()} transition has been initiated — ${row.id}`;
+  const body = `Hi ${row.employeeName.split(' ')[0]},\n\n`
+    + `Your manager, ${row.managerName}, has started a ${typeLabel[row.type].toLowerCase()} transition for you in Legacy AI (${row.id}).\n\n`
+    + `Next step: log in with your razorpay.com work email and confirm the handover items we've drafted from your self-reviews, or add anything that's missing.\n\n`
+    + `Open it here (demo link — open the employee validation dashboard in your browser):\n`
+    + `${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html')}\n\n`
+    + `This link only works for the email address the transition was raised against.`;
+  window.location.href = LegacyAIState.buildMailto(to, subject, body);
+  showToast(`Opening a real initiation email draft to ${to} — hit send in your email app to actually deliver it.`);
+}
+
+function toggleForm(){
+  document.getElementById('formPanel').classList.toggle('open');
+}
+
+function toggleDirectoryPanel(){
+  document.getElementById('directoryPanel').classList.toggle('open');
+}
+
+async function refreshDirectoryStatusLine(){
+  const source = await LegacyAIState.getDirectorySource();
+  const line = document.getElementById('directoryStatusLine');
+  if(!source.lastSyncedAt){
+    line.innerHTML = `<i class="ti ti-info-circle"></i> Directory not yet synced from a Google Sheet — using the seeded demo list.`;
+  } else {
+    const when = new Date(source.lastSyncedAt).toLocaleString();
+    const via = source.csvUrl ? 'from Google Sheet link' : 'from pasted sheet data';
+    line.innerHTML = `<i class="ti ti-cloud-check"></i> Directory synced ${via} — last synced ${when}.`;
+    if (source.csvUrl) document.getElementById('csvUrlInput').value = source.csvUrl;
+  }
+}
+
+async function refreshDirectoryDropdown(){
+  directory = await LegacyAIState.listDirectory();
+  const sel = document.getElementById('f-employee');
+  sel.innerHTML = '<option value="">Select an employee…</option>';
+  directory.forEach(u=>{
+    const opt = document.createElement('option');
+    opt.value = u.email; opt.textContent = `${u.name} — ${u.title || 'no title on file'}`;
+    sel.appendChild(opt);
+  });
+}
+
+async function syncDirectoryFromPaste(){
+  const csvText = document.getElementById('csvPasteInput').value.trim();
+  if(!csvText){ showToast('Paste the sheet data first.'); return; }
+  try {
+    const result = await LegacyAIState.syncDirectoryFromPastedCsv(csvText);
+    showToast(`Synced ${result.count} people from pasted data.`);
+    await refreshDirectoryDropdown();
+    await refreshDirectoryStatusLine();
+    document.getElementById('directoryPanel').classList.remove('open');
+  } catch (e) {
+    showToast('Sync failed: ' + e.message);
+  }
+}
+
+async function syncDirectoryNow(){
+  const csvUrl = document.getElementById('csvUrlInput').value.trim();
+  if(!csvUrl){ showToast('Paste the published CSV link first.'); return; }
+  try {
+    const result = await LegacyAIState.syncDirectory(csvUrl);
+    showToast(`Synced ${result.count} people from the sheet.`);
+    await refreshDirectoryDropdown();
+    await refreshDirectoryStatusLine();
+    document.getElementById('directoryPanel').classList.remove('open');
+  } catch (e) {
+    showToast('Sync failed: ' + e.message);
+  }
+}
+
+function onEmployeePicked(){
+  const email = document.getElementById('f-employee').value;
+  const preview = document.getElementById('directoryPreview');
+  if(!email){ preview.classList.remove('show'); preview.innerHTML=''; return; }
+  const u = directory.find(d => d.email === email);
+  if(!u){ preview.classList.remove('show'); return; }
+  const manager = directory.find(d => d.email === u.managerEmail);
+  const docRow = (label, link) => `<div class="row"><b>${label}</b> ${link ? `<a href="${link}" target="_blank">${link}</a>` : '<span class="missing">not on file</span>'}</div>`;
+  preview.innerHTML = `
+    <div class="row"><b>Manager (auto)</b> ${manager ? `${manager.name} (${manager.email})` : (u.managerEmail || '<span class="missing">no manager on file</span>')}</div>
+    ${docRow('Self-review Q1', u.q1Link)}
+    ${docRow('Self-review Q2', u.q2Link)}
+    ${docRow('Self-review Q3', u.q3Link)}
+    ${docRow('Manager expectations doc', u.expLink)}
+  `;
+  preview.classList.add('show');
+}
+
+async function saveTransition(){
+  const employeeEmail = document.getElementById('f-employee').value;
+  if(!employeeEmail){ showToast('Pick an employee from the directory to save.'); return; }
+  const type = document.getElementById('f-type').value;
+  const triggerDate = document.getElementById('f-trigger').value.trim();
+  let created;
+  try {
+    created = await LegacyAIState.createTransition({ employeeEmail, type, triggerDate: triggerDate || null });
+  } catch (e) {
+    showToast('Could not create the transition: ' + e.message);
+    return;
+  }
+  toggleForm();
+  document.getElementById('f-employee').value = '';
+  document.getElementById('f-trigger').value = '';
+  document.getElementById('directoryPreview').classList.remove('show');
+  await loadTransitions();
+  sendInitiationEmail(created.id);
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+async function init(){
+  directory = await LegacyAIState.listDirectory();
+  const sel = document.getElementById('f-employee');
+  directory.forEach(u=>{
+    const opt = document.createElement('option');
+    opt.value = u.email; opt.textContent = `${u.name} — ${u.title || 'no title on file'}`;
+    sel.appendChild(opt);
+  });
+  await refreshDirectoryStatusLine();
+}
+
+init();
+</script>
+</body>
+</html>

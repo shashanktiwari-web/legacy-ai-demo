@@ -1,0 +1,11 @@
+# SQLite database — this is generated/seeded automatically on first run.
+# Never commit it: it holds whatever demo data you've synced locally, and
+# committing it would fight with Render's persistent disk (which keeps its
+# own copy on the server).
+server/legacy_ai.db
+server/legacy_ai.db-journal
+
+# Editor/OS noise
+.DS_Store
+desktop.ini
+node_modules/

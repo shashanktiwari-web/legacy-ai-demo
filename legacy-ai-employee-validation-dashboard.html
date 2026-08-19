@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Legacy AI — Employee Handover Validation Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css" />
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#ffffff; --border:#e3e5e9; --border-strong:#c7cad1;
+    --text:#1b1e24; --text-2:#5b616e; --text-3:#8a8f99;
+    --accent:#3b5bfd; --accent-bg:#eaeeff;
+    --green:#1d9e75; --green-bg:#e1f5ee;
+    --amber:#ba7517; --amber-bg:#faeeda;
+    --red:#c93b3b; --red-bg:#fcebeb;
+    --purple:#534ab7; --purple-bg:#eeedfe;
+    --gray:#5f5e5a; --gray-bg:#f1efe8;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:1360px;margin:0 auto;padding:28px 32px 60px;}
+  .center-wrap{max-width:560px;margin:60px auto;padding:0 20px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:16px;}
+  .tag{font-size:12px;font-weight:600;color:var(--purple);background:var(--purple-bg);padding:3px 10px;border-radius:999px;}
+  h1{font-size:22px;font-weight:600;margin:8px 0 4px;}
+  .sub{color:var(--text-2);font-size:14px;margin:0;}
+  .identity{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;}
+  .avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-bg);color:#2a3fbf;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;}
+  .identity .name{font-weight:600;font-size:14px;}
+  .identity .role{font-size:12.5px;color:var(--text-2);}
+
+  .consent{display:flex;align-items:center;gap:10px;background:var(--green-bg);border:1px solid #bfe6d7;color:#116349;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:20px;}
+  .consent.pending{background:var(--amber-bg);border-color:#f0d9ac;color:#7a4d0c;}
+  .consent b{font-weight:600;}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+  .stat .num{font-size:26px;font-weight:600;}
+  .stat .lbl{font-size:13px;color:var(--text-2);margin-top:2px;}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;}
+  input[type=text], input[type=email], select{border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:13.5px;background:#fff;color:var(--text);}
+
+  .tablewrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:1240px;}
+  th{text-align:left;font-weight:600;color:var(--text-2);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding:10px 12px;border-bottom:1px solid var(--border);background:#fafbfc;white-space:nowrap;}
+  td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  tr.disputed{background:#fff9f2;}
+
+  .item-title{font-weight:600;font-size:13px;}
+  .desc{color:var(--text-2);font-size:12.5px;max-width:220px;}
+  .stakeholders{font-size:12.5px;color:var(--text-2);}
+
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+  .cat-projects{background:var(--accent-bg);color:#2a3fbf;}
+  .cat-stake{background:var(--purple-bg);color:var(--purple);}
+  .cat-process{background:var(--gray-bg);color:#514f49;}
+  .cat-access{background:var(--red-bg);color:#8c2a2a;}
+  .cat-deps{background:var(--amber-bg);color:var(--amber);}
+
+  .priority{font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;}
+  .priority.high{background:var(--red-bg);color:#8c2a2a;}
+  .priority.medium{background:var(--amber-bg);color:var(--amber);}
+  .priority.low{background:var(--gray-bg);color:#514f49;}
+
+  .source{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-3);border:1px solid var(--border);padding:2px 7px;border-radius:6px;white-space:nowrap;}
+
+  .status-pill{font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:999px;display:inline-block;}
+  .st-pending{background:var(--gray-bg);color:#514f49;}
+  .st-confirmed{background:var(--green-bg);color:var(--green);}
+  .st-edited{background:var(--accent-bg);color:#2a3fbf;}
+  .st-disputed{background:var(--red-bg);color:#8c2a2a;}
+  .st-na{color:var(--text-3);font-size:12px;}
+  .st-agreed{background:var(--green-bg);color:var(--green);}
+  .st-overruled{background:var(--purple-bg);color:var(--purple);}
+
+  .row-actions{display:flex;gap:4px;margin-top:6px;}
+  .mini{border:1px solid var(--border-strong);background:#fff;border-radius:6px;font-size:11px;padding:3px 7px;cursor:pointer;}
+  .mini:hover{background:#f0f1f3;}
+  .mini.confirm:hover{background:var(--green-bg);border-color:#bfe6d7;}
+  .mini.dispute:hover{background:var(--red-bg);border-color:#f3c7c7;}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#1b1e24;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;max-width:520px;text-align:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .footnote{margin-top:14px;font-size:12px;color:var(--text-3);}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 24px;}
+  .email-mock{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:16px;}
+  .email-mock .hdr{background:#fafbfc;border-bottom:1px solid var(--border);padding:10px 14px;font-size:12.5px;color:var(--text-2);}
+  .email-mock .hdr b{color:var(--text);}
+  .email-mock .body{padding:18px;font-size:13.5px;line-height:1.6;}
+  .field{display:flex;flex-direction:column;gap:5px;margin-top:14px;}
+  .field label{font-size:12.5px;font-weight:600;color:var(--text-2);}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:14px;font-weight:500;padding:9px 14px;border-radius:8px;cursor:pointer;}
+  .btn:hover{background:#f0f1f3;}
+  .btn.primary{background:var(--text);color:#fff;border-color:var(--text);}
+  .btn.primary:hover{background:#000;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .checkline{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text-2);margin-top:14px;}
+  .checkline input{margin-top:3px;}
+
+  .audit{margin-top:18px;}
+  .audit-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12.5px;}
+  .audit-item:last-child{border-bottom:none;}
+  .audit-time{color:var(--text-3);min-width:66px;}
+  .audit-actor{font-weight:600;min-width:70px;}
+  .empty-state{padding:40px 24px;text-align:center;color:var(--text-2);font-size:13.5px;}
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: simulated email the employee receives after HR clicks Notify -->
+<div class="center-wrap" id="screenEmail">
+  <span class="tag">LEGACY AI · DAY0 HACKATHON</span>
+  <h1>Inbox preview</h1>
+  <p class="sub">This is what the employee receives the moment HR clicks "Notify employee" on the transition dashboard.</p>
+  <div class="email-mock">
+    <div class="hdr">From: <b>legacy-ai@razorpay.com</b> · To: <b id="emailToPreview">—</b> · Subject: <b>Your handover dashboard is ready — action needed within 10 working days</b></div>
+    <div class="body" id="emailBodyPreview">
+      Loading…
+    </div>
+  </div>
+  <p class="footnote">Preview only — the real send happens via the "Send real email" buttons on the HR/manager dashboard.</p>
+</div>
+
+<!-- SCREEN 2: consent + email verification gate -->
+<div class="center-wrap" id="screenConsent" style="display:none;">
+  <span class="tag">LEGACY AI · DAY0 HACKATHON</span>
+  <h1>Confirm it's you</h1>
+  <p class="sub">Before opening the dashboard, confirm your email and consent to what Legacy AI will read during context capture.</p>
+  <div class="card">
+    <div class="field">
+      <label>Work email</label>
+      <input type="email" id="verifyEmail" placeholder="you@razorpay.com">
+      <span class="footnote" style="margin:0;" id="verifyHint">This link was sent to a specific address — enter it to confirm it's really you.</span>
+    </div>
+    <div class="checkline">
+      <input type="checkbox" id="c1"><span>I consent to Legacy AI reading my calendar, meeting notes, decision memos, and public/group Slack channels (no 1:1 DMs) to prepare context-capture questions.</span>
+    </div>
+    <div class="checkline">
+      <input type="checkbox" id="c2"><span>I understand every edit I make here is logged with my name, email, and timestamp for my manager's review.</span>
+    </div>
+    <div style="margin-top:18px;"><button class="btn primary" id="acceptBtn" onclick="acceptAndEnter()"><i class="ti ti-lock-open"></i> Accept and open dashboard</button></div>
+  </div>
+</div>
+
+<!-- SCREEN 3: the actual validation dashboard -->
+<div class="wrap" id="screenDashboard" style="display:none;">
+
+  <div class="topbar">
+    <div>
+      <span class="tag">LEGACY AI · DAY0 HACKATHON</span>
+      <h1>Handover validation dashboard</h1>
+      <p class="sub">AI drafts every line item from the self-reviews and manager expectations doc. Employee validates first — only disputes go to the manager.</p>
+    </div>
+    <div class="identity">
+      <div class="avatar" id="empAvatar">—</div>
+      <div>
+        <div class="name" id="verifiedName">—</div>
+        <div class="role" id="empRoleLine">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="consent" id="consentBanner">
+    <i class="ti ti-shield-check"></i>
+    <span><b>Identity verified and consent recorded</b> — every validation action below is written to the audit log at the bottom of this page with your email and a timestamp.</span>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="filters">
+        <input type="text" id="search" placeholder="Search item or stakeholder..." oninput="render()">
+        <select id="catFilter" onchange="render()">
+          <option value="">All categories</option>
+          <option value="cat-projects">Projects</option>
+          <option value="cat-stake">Stakeholders</option>
+          <option value="cat-process">Process</option>
+          <option value="cat-access">Access</option>
+          <option value="cat-deps">Dependencies</option>
+        </select>
+        <select id="empFilter" onchange="render()">
+          <option value="">Any employee status</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="edited">Edited</option>
+          <option value="disputed">Disputed</option>
+        </select>
+      </div>
+      <div class="sub" style="font-size:12.5px;">Manager only sees rows the employee disputes</div>
+    </div>
+
+    <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Item / project</th>
+          <th>Description / objective</th>
+          <th>Current status</th>
+          <th>Supporting doc</th>
+          <th>Key stakeholders</th>
+          <th>Priority</th>
+          <th>Owner</th>
+          <th>AI source</th>
+          <th>Employee validation</th>
+          <th>Manager validation</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    </div>
+  </div>
+
+  <p class="footnote">AI source shows exactly which uploaded document the line item was drafted from, so both employee and manager can trace every claim back to its origin.</p>
+
+  <div class="panel audit">
+    <div class="panel-head">
+      <div><b style="font-size:14px;">Change log</b><div class="sub" style="font-size:12.5px;">Every action on this page, in order — this is what gets written back to the transition record.</div></div>
+      <button class="btn" onclick="proceedToContextCapture()" id="proceedBtn" disabled><i class="ti ti-arrow-right"></i> All validated — start context capture</button>
+    </div>
+    <div style="padding:6px 18px 18px;" id="auditLog"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="legacy-ai-state.js"></script>
+<script>
+let verifiedEmail = '';
+let currentState = null;
+let data = [];
+
+function goTo(id){
+  ['screenEmail','screenConsent','screenDashboard'].forEach(s=>document.getElementById(s).style.display='none');
+  document.getElementById(id).style.display = 'block';
+}
+
+function acceptAndEnter(){
+  const email = document.getElementById('verifyEmail').value.trim().toLowerCase();
+  const c1 = document.getElementById('c1').checked;
+  const c2 = document.getElementById('c2').checked;
+  const expectedEmail = currentState.employee.email.toLowerCase();
+  if(!email || !email.includes('@')){ showToast('Enter a valid work email to continue.'); return; }
+  if(!email.endsWith('@razorpay.com')){ showToast('Only razorpay.com email addresses can access this — enter your Razorpay work email.'); return; }
+  if(email !== expectedEmail){ showToast(`This handover link is for ${expectedEmail} only. Check the email you entered.`); return; }
+  if(!c1 || !c2){ showToast('Both consent checkboxes are required to proceed.'); return; }
+  verifiedEmail = email;
+  logAudit(currentState.employee.name, `Accepted consent and opened dashboard (verified as ${email})`);
+  goTo('screenDashboard');
+  render();
+}
+
+let auditEntries = [];
+
+function logAudit(actor, action){
+  const now = new Date();
+  const time = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  auditEntries.unshift({time, actor, action});
+  renderAudit();
+}
+
+function renderAudit(){
+  const el = document.getElementById('auditLog');
+  if(!el) return;
+  if(auditEntries.length===0){ el.innerHTML = `<div class="sub" style="font-size:12.5px;">No actions yet.</div>`; return; }
+  el.innerHTML = auditEntries.map(e=>`
+    <div class="audit-item"><div class="audit-time">${e.time}</div><div class="audit-actor">${e.actor}</div><div>${e.action}</div></div>
+  `).join('');
+}
+
+function renderStats(){
+  const total = data.length;
+  const confirmed = data.filter(r=>r.empStatus==='confirmed'||r.empStatus==='edited').length;
+  const disputed = data.filter(r=>r.empStatus==='disputed').length;
+  const resolved = data.filter(r=>r.mgrStatus==='agreed'||r.mgrStatus==='overruled').length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="num">${total}</div><div class="lbl">Total AI-drafted items</div></div>
+    <div class="stat"><div class="num">${confirmed}</div><div class="lbl">Validated by employee</div></div>
+    <div class="stat"><div class="num">${disputed}</div><div class="lbl">Disputed → sent to manager</div></div>
+    <div class="stat"><div class="num">${resolved}</div><div class="lbl">Manager resolved</div></div>
+  `;
+  const allSettled = data.length > 0 && data.every(r=> (r.empStatus==='confirmed'||r.empStatus==='edited') || (r.empStatus==='disputed' && (r.mgrStatus==='agreed'||r.mgrStatus==='overruled')) );
+  document.getElementById('proceedBtn').disabled = !allSettled;
+  if(allSettled) document.getElementById('proceedBtn').classList.add('primary'); else document.getElementById('proceedBtn').classList.remove('primary');
+}
+
+function empPill(r){
+  const map = {pending:['st-pending','Pending'], confirmed:['st-confirmed','Confirmed'], edited:['st-edited','Edited'], disputed:['st-disputed','Disputed']};
+  const [cls,label] = map[r.empStatus];
+  let html = `<span class="status-pill ${cls}">${label}</span>`;
+  if(r.empStatus==='pending'){
+    html += `<div class="row-actions">
+      <button class="mini confirm" onclick="setEmp(${r.id},'confirmed')">Confirm</button>
+      <button class="mini" onclick="setEmp(${r.id},'edited')">Edit</button>
+      <button class="mini dispute" onclick="setEmp(${r.id},'disputed')">Dispute</button>
+    </div>`;
+  }
+  return html;
+}
+
+function mgrPill(r){
+  if(r.empStatus!=='disputed') return `<span class="st-na">Not needed</span>`;
+  const map = {pending:['st-pending','Pending review'], agreed:['st-agreed','Agreed with employee'], overruled:['st-overruled','Overruled — kept AI version']};
+  const [cls,label] = map[r.mgrStatus] || map.pending;
+  let html = `<span class="status-pill ${cls}">${label}</span>`;
+  if(r.note) html += `<div class="desc" style="margin-top:4px;">${r.note}</div>`;
+  if(r.mgrStatus==='pending'){
+    html += `<div class="row-actions">
+      <button class="mini confirm" onclick="setMgr(${r.id},'agreed')">Agree</button>
+      <button class="mini" onclick="setMgr(${r.id},'overruled')">Overrule</button>
+    </div>`;
+  }
+  return html;
+}
+
+function render(){
+  renderStats();
+  const q = document.getElementById('search').value.toLowerCase();
+  const cf = document.getElementById('catFilter').value;
+  const ef = document.getElementById('empFilter').value;
+  const tbody = document.getElementById('rows');
+  tbody.innerHTML = '';
+  if(data.length === 0){
+    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state">No AI-drafted items yet for this transition — HR/manager still need to point Legacy AI at this employee's self-review docs.</div></td></tr>`;
+    renderAudit();
+    return;
+  }
+  data.forEach(r=>{
+    if(q && !(r.item.toLowerCase().includes(q) || (r.stakeholders||'').toLowerCase().includes(q))) return;
+    if(cf && cf!==r.cat) return;
+    if(ef && ef!==r.empStatus) return;
+    const tr = document.createElement('tr');
+    if(r.empStatus==='disputed') tr.className='disputed';
+    tr.innerHTML = `
+      <td><span class="badge ${r.cat}">${r.catLabel}</span></td>
+      <td class="item-title">${r.item}</td>
+      <td class="desc">${r.desc}</td>
+      <td class="desc">${r.curStatus}</td>
+      <td class="desc"><i class="ti ti-link"></i> ${r.doc}</td>
+      <td class="stakeholders">${r.stakeholders}</td>
+      <td><span class="priority ${r.priority}">${r.priority[0].toUpperCase()+r.priority.slice(1)}</span></td>
+      <td>${r.owner}</td>
+      <td><span class="source"><i class="ti ti-sparkles"></i> ${r.source}</span></td>
+      <td>${empPill(r)}</td>
+      <td>${mgrPill(r)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  renderAudit();
+}
+
+async function setEmp(id, status){
+  const r = data.find(x=>x.id===id);
+  r.empStatus = status;
+  if(status==='disputed') r.mgrStatus = 'pending';
+  await LegacyAIState.updateValidationItem(id, { empStatus: r.empStatus, mgrStatus: r.mgrStatus });
+  logAudit(currentState.employee.name, `Marked "${r.item}" as ${status}`);
+  render();
+  const msg = status==='disputed' ? `Item sent to manager for review.` : `Marked as ${status}. Change recorded in audit log.`;
+  showToast(msg);
+}
+
+async function setMgr(id, status){
+  const r = data.find(x=>x.id===id);
+  r.mgrStatus = status;
+  await LegacyAIState.updateValidationItem(id, { mgrStatus: status });
+  logAudit(`${currentState.manager.name} (manager)`, `${status==='agreed'?'Agreed with employee on':'Overruled dispute, kept AI version for'} "${r.item}"`);
+  render();
+  showToast(status==='agreed' ? 'Manager agreed with employee — item updated.' : 'Manager overruled — AI-drafted version kept.');
+}
+
+function proceedToContextCapture(){
+  if(document.getElementById('proceedBtn').disabled) return;
+  logAudit('System', 'All items validated — handing off to context capture.');
+  showToast('Opening context capture...');
+  setTimeout(()=>{ window.location.href = LegacyAIState.linkTo('legacy-ai-context-capture.html'); }, 700);
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 3200);
+}
+
+async function init(){
+  currentState = await LegacyAIState.get();
+  data = currentState.validationItems;
+
+  const firstName = currentState.employee.name.split(' ')[0];
+  document.getElementById('emailToPreview').textContent = currentState.employee.email;
+  document.getElementById('emailBodyPreview').innerHTML = `
+    Hi ${firstName},<br><br>
+    Your manager, ${currentState.manager.name}, has initiated your role transition (${currentState.transitionId}). We've pre-built your handover dashboard from your last self-reviews and your manager's expectations doc — most of it is already filled in.<br><br>
+    Please open the link below to review, confirm, or correct anything before it goes to your manager for approval.
+    <div style="margin-top:16px;"><button class="btn primary" onclick="goTo('screenConsent')"><i class="ti ti-external-link"></i> Open my handover dashboard</button></div>
+  `;
+  document.getElementById('verifyHint').textContent = `This link was sent to ${currentState.employee.email} — enter it to confirm it's really you.`;
+
+  document.getElementById('empAvatar').textContent = currentState.employee.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('verifiedName').textContent = currentState.employee.name;
+  document.getElementById('empRoleLine').textContent = `${currentState.employee.role || 'Role not on file'} · ${currentState.transitionId}`;
+
+  goTo('screenEmail');
+}
+
+init();
+</script>
+</body>
+</html>

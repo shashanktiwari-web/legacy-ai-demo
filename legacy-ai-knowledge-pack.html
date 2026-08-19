@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Legacy AI — Knowledge Pack</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css" />
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#ffffff; --border:#e3e5e9; --border-strong:#c7cad1;
+    --text:#1b1e24; --text-2:#5b616e; --text-3:#8a8f99;
+    --accent:#3b5bfd; --accent-bg:#eaeeff;
+    --green:#1d9e75; --green-bg:#e1f5ee;
+    --purple:#534ab7; --purple-bg:#eeedfe;
+    --amber:#ba7517; --amber-bg:#faeeda;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 32px 60px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:16px;}
+  .tag{font-size:12px;font-weight:600;color:var(--purple);background:var(--purple-bg);padding:3px 10px;border-radius:999px;}
+  h1{font-size:22px;font-weight:600;margin:8px 0 4px;}
+  .sub{color:var(--text-2);font-size:14px;margin:0;}
+  .identity{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;}
+  .avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-bg);color:#2a3fbf;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;}
+  .identity .name{font-weight:600;font-size:14px;}
+  .identity .role{font-size:12.5px;color:var(--text-2);}
+
+  .banner{display:flex;align-items:center;gap:10px;background:var(--green-bg);border:1px solid #bfe6d7;color:#116349;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:22px;}
+  .banner.warn{background:var(--amber-bg);border-color:#f0d9ac;color:#7a4d0c;}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .asset-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;cursor:pointer;transition:.15s;}
+  .asset-card:hover{border-color:var(--border-strong);}
+  .asset-card.open{border-color:var(--accent);}
+  .asset-head{display:flex;align-items:flex-start;gap:10px;}
+  .asset-icon{width:32px;height:32px;border-radius:8px;background:var(--accent-bg);color:#2a3fbf;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .asset-title{font-weight:600;font-size:13.5px;}
+  .asset-teaser{font-size:12px;color:var(--text-2);margin-top:3px;}
+  .chevron{margin-left:auto;color:var(--text-3);transition:.2s;}
+  .asset-card.open .chevron{transform:rotate(180deg);}
+
+  .detail{max-width:1100px;margin:16px auto 0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 26px;display:none;}
+  .detail.show{display:block;}
+  .detail h2{font-size:17px;font-weight:600;margin:0 0 4px;}
+  .detail .src{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-3);border:1px solid var(--border);padding:2px 8px;border-radius:6px;margin-bottom:14px;}
+  .detail p{font-size:13.5px;line-height:1.7;color:var(--text);margin:0 0 10px;}
+  .detail ul{margin:0 0 12px;padding-left:20px;}
+  .detail li{font-size:13.5px;line-height:1.7;margin-bottom:4px;}
+  .detail .faq-q{font-weight:600;font-size:13.5px;margin-top:12px;}
+  .detail .faq-a{font-size:13.5px;color:var(--text-2);margin-top:2px;}
+  .close-detail{float:right;border:1px solid var(--border-strong);background:var(--surface);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;}
+  .close-detail:hover{background:#f0f1f3;}
+
+  .footactions{display:flex;justify-content:space-between;align-items:center;margin-top:28px;flex-wrap:wrap;gap:10px;}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:14px;font-weight:500;padding:9px 14px;border-radius:8px;cursor:pointer;}
+  .btn:hover{background:#f0f1f3;}
+  .btn.primary{background:var(--text);color:#fff;border-color:var(--text);}
+  .btn.primary:hover{background:#000;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .footnote{font-size:12px;color:var(--text-3);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div>
+      <span class="tag">LEGACY AI · DAY0 HACKATHON · STEP 3</span>
+      <h1 id="packTitle">Knowledge pack</h1>
+      <p class="sub" id="packSub">Auto-generated from the validated handover dashboard and manager-approved context-capture answers. Every card traces back to where it came from.</p>
+    </div>
+    <div class="identity">
+      <div class="avatar" id="packAvatar">—</div>
+      <div>
+        <div class="name" id="packEmployeeName">—</div>
+        <div class="role" id="packEmployeeRole">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="banner" id="packBanner"><i class="ti ti-sparkles"></i> Loading…</div>
+  <div class="banner warn" id="noSuccessorBanner" style="display:none;"><i class="ti ti-alert-triangle"></i> No successor assigned to this transition yet — assign one on the HR/manager dashboard before sending the chatbot.</div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="detail" id="detailPanel"></div>
+
+  <div class="footactions">
+    <span class="footnote">Saved to the live database and trains the Successor Companion. Use "Export Brainroom JSON" to download a snapshot in the same shape as Brainroom/&lt;name&gt; - &lt;transition id&gt;.json.</span>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" onclick="LegacyAIState.exportBrainroomJSON()"><i class="ti ti-download"></i> Export Brainroom JSON</button>
+      <button class="btn primary" id="emailSuccessorBtn" onclick="emailSuccessor()"><i class="ti ti-mail"></i> Email chatbot link to successor</button>
+      <button class="btn" id="sendRealBtn" onclick="sendRealEmailToSuccessor()" title="Opens a real mailto: draft for demo day"><i class="ti ti-send"></i> Send real email</button>
+    </div>
+  </div>
+
+  <div class="panel" id="emailPreviewPanel" style="display:none; margin-top:16px;">
+    <div class="panel-head">
+      <b>Email sent to successor (simulated)</b>
+      <p class="sub">This is what gets sent the moment you click "Email chatbot link to successor".</p>
+    </div>
+    <div class="email-mock" style="margin:0 18px 18px;">
+      <div class="hdr" id="emailPreviewHdr" style="background:#fafbfc; border-bottom:1px solid var(--border); padding:10px 14px; font-size:12px; color:var(--text-2);"></div>
+      <div class="body" id="emailPreviewBody" style="padding:16px; font-size:13.5px; line-height:1.6;"></div>
+    </div>
+    <div style="padding:0 18px 18px;">
+      <button class="btn primary" onclick="window.location.href=LegacyAIState.linkTo('legacy-ai-successor-companion.html')"><i class="ti ti-arrow-right"></i> Open successor companion</button>
+    </div>
+  </div>
+</div>
+
+<script src="legacy-ai-state.js"></script>
+<script>
+let _kpState = null;
+let assets = [];
+let openKey = null;
+
+async function emailSuccessor(){
+  if(!_kpState.successor){ showToastFallback('Assign a successor to this transition before notifying them.'); return; }
+  await LegacyAIState.patch({ successorNotifiedAt: new Date().toISOString() });
+  document.getElementById('emailPreviewHdr').innerHTML =
+    `From: <b>legacy-ai@razorpay.com</b> · To: <b>${_kpState.successor.email}</b> · Subject: <b>Your chatbot is ready — Your AI Work Partner: ${_kpState.employee.name}</b>`;
+  document.getElementById('emailPreviewBody').innerHTML =
+    `Hi ${_kpState.successor.name.split(' ')[0]},<br><br>` +
+    `${_kpState.employee.name}'s knowledge has been packaged into a chatbot — <b>Your AI Work Partner: ${_kpState.employee.name}</b>.<br><br>` +
+    `You have <b>10 days</b> to complete training: open the companion, ask it questions, and answer its 5 daily check-in questions each day. ` +
+    `If you don't open it by 6 PM, you'll get a reminder email like this one every evening until Day 10 is done.<br><br>` +
+    `<button class="btn primary" onclick="window.location.href=LegacyAIState.linkTo('legacy-ai-successor-companion.html')">Open Your AI Work Partner: ${_kpState.employee.name}</button>`;
+  document.getElementById('emailPreviewPanel').style.display = 'block';
+  document.getElementById('emailPreviewPanel').scrollIntoView({behavior:'smooth'});
+}
+
+// Demo-day option: opens a real mailto: draft with the same content as the
+// simulated preview above, instead of just showing the mock box.
+function sendRealEmailToSuccessor(){
+  if(!_kpState.successor){ showToastFallback('Assign a successor to this transition before notifying them.'); return; }
+  const to = prompt('Send the real "chatbot is ready" email to:', _kpState.successor.email);
+  if(!to) return;
+  const subject = `Your chatbot is ready — Your AI Work Partner: ${_kpState.employee.name}`;
+  const body = `Hi ${_kpState.successor.name.split(' ')[0]},\n\n`
+    + `${_kpState.employee.name}'s knowledge has been packaged into a chatbot — Your AI Work Partner: ${_kpState.employee.name}.\n\n`
+    + `You have 10 days to complete training: open the companion, ask it questions, and answer its 5 daily check-in questions each day. `
+    + `If you don't open it by 6 PM, you'll get a reminder email every evening until Day 10 is done.\n\n`
+    + `Open it here (demo link — open the successor companion in your browser):\n`
+    + `${LegacyAIState.linkTo('legacy-ai-successor-companion.html')}`;
+  window.location.href = LegacyAIState.buildMailto(to, subject, body);
+}
+
+function showToastFallback(msg){ alert(msg); }
+
+function renderGrid(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = assets.map(a => `
+    <div class="asset-card ${openKey===a.key?'open':''}" onclick="toggle('${a.key}')">
+      <div class="asset-head">
+        <div class="asset-icon"><i class="ti ${a.icon}"></i></div>
+        <div>
+          <div class="asset-title">${a.title}</div>
+          <div class="asset-teaser">${a.teaser}</div>
+        </div>
+        <i class="ti ti-chevron-down chevron"></i>
+      </div>
+    </div>
+  `).join('');
+  renderDetail();
+}
+
+function toggle(key){
+  openKey = (openKey===key) ? null : key;
+  renderGrid();
+  if(openKey){
+    setTimeout(()=>document.getElementById('detailPanel').scrollIntoView({behavior:'smooth', block:'nearest'}), 50);
+  }
+}
+
+function renderDetail(){
+  const panel = document.getElementById('detailPanel');
+  if(!openKey){ panel.className = 'detail'; panel.innerHTML=''; return; }
+  const a = assets.find(x=>x.key===openKey);
+  panel.className = 'detail show';
+  panel.innerHTML = `
+    <button class="close-detail" onclick="toggle('${a.key}')"><i class="ti ti-x"></i> Close</button>
+    <h2>${a.title}</h2>
+    <span class="src"><i class="ti ti-sparkles"></i> Sourced from: ${a.source}</span>
+    ${a.html}
+  `;
+}
+
+async function init(){
+  _kpState = await LegacyAIState.get();
+  assets = LegacyAIState.buildAssets(_kpState);
+
+  document.getElementById('packTitle').textContent = `Your AI Work Partner — ${_kpState.employee.name}`;
+  document.getElementById('packAvatar').textContent = _kpState.employee.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('packEmployeeName').textContent = _kpState.employee.name;
+  document.getElementById('packEmployeeRole').textContent = `${_kpState.employee.role || 'Role not on file'} · ${_kpState.transitionId}`;
+  document.getElementById('packBanner').innerHTML = `<i class="ti ti-sparkles"></i> ${assets.length} knowledge assets generated from ${_kpState.validationItems.length} validated handover items and ${_kpState.contextAnswers.length} context-capture answers. Click any card to expand it.`;
+
+  if(!_kpState.successor){
+    document.getElementById('noSuccessorBanner').style.display = 'flex';
+    document.getElementById('emailSuccessorBtn').disabled = true;
+    document.getElementById('sendRealBtn').disabled = true;
+  }
+
+  renderGrid();
+}
+
+init();
+</script>
+</body>
+</html>

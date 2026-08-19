@@ -1,0 +1,12 @@
+{
+  "name": "legacy-ai-server",
+  "version": "1.0.0",
+  "description": "Legacy AI backend — zero-dependency Node server (built-in http + node:sqlite) serving the API and the static frontend.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

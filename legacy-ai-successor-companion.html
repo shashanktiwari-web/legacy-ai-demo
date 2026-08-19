@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Legacy AI — Successor Companion</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css" />
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#ffffff; --border:#e3e5e9; --border-strong:#c7cad1;
+    --text:#1b1e24; --text-2:#5b616e; --text-3:#8a8f99;
+    --accent:#3b5bfd; --accent-bg:#eaeeff;
+    --green:#1d9e75; --green-bg:#e1f5ee;
+    --purple:#534ab7; --purple-bg:#eeedfe;
+    --amber:#ba7517; --amber-bg:#faeeda;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 32px 60px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:16px;}
+  .tag{font-size:12px;font-weight:600;color:var(--purple);background:var(--purple-bg);padding:3px 10px;border-radius:999px;}
+  h1{font-size:22px;font-weight:600;margin:8px 0 4px;}
+  .sub{color:var(--text-2);font-size:14px;margin:0;}
+  .identity{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;}
+  .avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-bg);color:#2a3fbf;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;}
+  .identity .name{font-weight:600;font-size:14px;}
+  .identity .role{font-size:12.5px;color:var(--text-2);}
+
+  .checkin-banner{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--amber-bg);border:1px solid #f0d9ac;color:#7a4d0c;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:20px;}
+  .checkin-banner.done{background:var(--green-bg);border-color:#bfe6d7;color:#116349;}
+  .checkin-banner b{font-weight:600;}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:13.5px;font-weight:500;padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .btn:hover{background:#f0f1f3;}
+  .btn.primary{background:var(--text);color:#fff;border-color:var(--text);}
+  .btn.primary:hover{background:#000;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn.sm{padding:5px 10px;font-size:12px;}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;overflow:hidden;}
+  .panel-head{padding:14px 18px;border-bottom:1px solid var(--border);}
+  .panel-head b{font-size:14.5px;}
+  .panel-head .sub{font-size:12.5px;}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;padding:14px 18px 0;}
+  .chip{border:1px solid var(--border-strong);background:#fff;border-radius:999px;font-size:12.5px;padding:6px 12px;cursor:pointer;}
+  .chip:hover{background:var(--accent-bg);border-color:var(--accent);}
+
+  .chatlog{padding:16px 18px;max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
+  .msg{display:flex;gap:10px;max-width:82%;}
+  .msg.user{margin-left:auto;flex-direction:row-reverse;}
+  .msg .bubble-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;flex-shrink:0;}
+  .msg.bot .bubble-avatar{background:var(--purple-bg);color:var(--purple);}
+  .msg.user .bubble-avatar{background:var(--accent-bg);color:#2a3fbf;}
+  .bubble{background:#f3f4f6;border-radius:10px;padding:10px 13px;font-size:13.5px;line-height:1.6;}
+  .msg.user .bubble{background:var(--accent-bg);}
+  .bubble .src{display:block;margin-top:6px;font-size:11px;color:var(--text-3);}
+
+  .composer{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);}
+  .composer input{flex:1;border:1px solid var(--border-strong);border-radius:8px;padding:9px 12px;font-size:13.5px;}
+
+  .qa-grid{padding:16px 18px;display:flex;flex-direction:column;gap:14px;}
+  .qa-item label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;}
+  .qa-item textarea{width:100%;min-height:60px;border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical;}
+  .qa-actions{padding:0 18px 18px;display:flex;justify-content:flex-end;gap:8px;}
+
+  .brainroom-log{padding:0 18px 16px;}
+  .br-entry{background:#fafbfc;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12.5px;margin-bottom:8px;}
+  .br-entry b{font-size:12px;}
+
+  .email-mock{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:0 18px 18px;}
+  .email-mock .hdr{background:#fafbfc;border-bottom:1px solid var(--border);padding:10px 14px;font-size:12px;color:var(--text-2);}
+  .email-mock .body{padding:16px;font-size:13px;line-height:1.6;}
+  .email-mock ol{margin:8px 0 0;padding-left:20px;}
+  .email-mock li{margin-bottom:6px;}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#1b1e24;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;max-width:520px;text-align:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .footnote{font-size:12px;color:var(--text-3);margin-top:4px;}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="screenLogin" style="max-width:520px; margin:70px auto; padding:0 20px;">
+  <span class="tag">LEGACY AI · DAY0 HACKATHON · STEP 4</span>
+  <h1 id="loginTitle">Successor companion</h1>
+  <p class="sub">Confirm your work email to open your training companion.</p>
+  <div class="panel" style="padding:20px;">
+    <div style="display:flex; flex-direction:column; gap:5px;">
+      <label style="font-size:12.5px; font-weight:600; color:var(--text-2);">Work email</label>
+      <input type="text" id="loginEmail" placeholder="e.g. name@razorpay.com" style="border:1px solid var(--border-strong); border-radius:8px; padding:9px 12px; font-size:13.5px;">
+      <span class="footnote" id="loginHint" style="margin:0;"></span>
+    </div>
+    <div style="margin-top:16px;"><button class="btn primary" onclick="attemptLogin()"><i class="ti ti-login"></i> Open companion</button></div>
+  </div>
+</div>
+
+<div class="wrap" id="screenCompanion" style="display:none;">
+
+  <div class="topbar">
+    <div>
+      <span class="tag">LEGACY AI · DAY0 HACKATHON · STEP 4</span>
+      <h1 id="companionTitle">Successor companion</h1>
+      <p class="sub" id="companionSub">Ask it anything about the role.</p>
+    </div>
+    <div class="identity">
+      <div class="avatar" id="successorAvatar">—</div>
+      <div>
+        <div class="name" id="successorName">—</div>
+        <div class="role" id="successorRole">Incoming</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="checkin-banner" id="checkinBanner">
+    <span><i class="ti ti-clock-hour-4"></i> <b>Today's 5 mandatory questions</b> — not completed yet. If this stays open past 6 PM, Legacy AI emails them to you instead.</span>
+    <div style="display:flex; gap:8px;">
+      <button class="btn sm" onclick="scrollToCheckin()">Answer now</button>
+      <button class="btn sm" onclick="simulateMissed()">Simulate: not opened by 6 PM</button>
+      <button class="btn sm" onclick="sendRealReminderEmail()" title="Opens a real mailto: draft for demo day">Send real reminder email</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <b>Ask the companion</b>
+      <p class="sub">Grounded in the knowledge pack — every answer cites where it came from.</p>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="chatlog" id="chatlog"></div>
+    <div class="composer">
+      <input type="text" id="chatInput" placeholder="Ask about stakeholders, process, risk, or anything else..." onkeydown="if(event.key==='Enter') sendMessage()">
+      <button class="btn primary" onclick="sendMessage()"><i class="ti ti-send"></i></button>
+    </div>
+  </div>
+
+  <div class="panel" id="checkinPanel">
+    <div class="panel-head">
+      <b>Today's 5 mandatory questions</b>
+      <p class="sub" id="checkinSub">Answering these keeps the outgoing employee's context current now that they're gone — this is how the knowledge pack stays alive.</p>
+    </div>
+    <div class="qa-grid" id="qaGrid"></div>
+    <div class="qa-actions">
+      <button class="btn primary" onclick="submitCheckin()"><i class="ti ti-check"></i> Submit today's check-in</button>
+    </div>
+    <div class="brainroom-log" id="brainroomLog"></div>
+  </div>
+
+  <div class="panel" id="emailPanel" style="display:none;">
+    <div class="panel-head">
+      <b>Email fallback (simulated)</b>
+      <p class="sub">This is what gets sent if the check-in isn't completed by 6 PM.</p>
+    </div>
+    <div class="email-mock">
+      <div class="hdr" id="emailFallbackHdr">From: <b>legacy-ai@razorpay.com</b> · Subject: <b>Your 5 daily check-in questions — Legacy AI</b></div>
+      <div class="body" id="emailFallbackBody">
+        You haven't opened your Legacy AI companion today. Here are your 5 mandatory check-in questions — reply directly to this email or open the companion to answer them there.
+        <ol id="emailQuestions"></ol>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="legacy-ai-state.js"></script>
+<script>
+// Facts are no longer a fixed keyword->answer list. LegacyAIState.findAnswer
+// does real keyword/fuzzy retrieval over whatever is live in state right
+// now (validated handover items + context-capture answers) — edit an
+// answer upstream and the companion's response changes too.
+
+let currentState = null;
+
+const starterQuestions = [
+  'Who approves vendor exceptions?',
+  'Why was this process changed?',
+  'Which stakeholders are critical for month-end close?',
+  'What usually causes delays in this workflow?',
+  'What mistakes should I avoid during my first month?'
+];
+
+const dailyQuestions = [
+  "What's one decision you made today that you weren't fully confident about?",
+  "Which stakeholder did you interact with today, and how did it go?",
+  "Did anything in the knowledge pack turn out to be outdated, wrong, or missing?",
+  "What's blocking you right now, if anything?",
+  "What's one question you wish you could ask the outgoing employee directly today?"
+];
+
+let chatHistory = [];
+let checkinDone = false;
+let brainroomEntries = [];
+
+async function attemptLogin(){
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const hint = document.getElementById('loginHint');
+  if(!email || !email.includes('@')){ hint.textContent = 'Enter your work email to continue.'; return; }
+  if(!email.endsWith('@razorpay.com')){ hint.textContent = 'Only razorpay.com email addresses can access this companion.'; return; }
+  if(!currentState.successor){
+    hint.textContent = 'No successor has been assigned to this transition yet — check back once one is.';
+    return;
+  }
+  if(email !== currentState.successor.email.toLowerCase()){
+    hint.textContent = `This companion was sent to ${currentState.successor.email} — enter that address to open it.`;
+    return;
+  }
+  document.getElementById('screenLogin').style.display = 'none';
+  document.getElementById('screenCompanion').style.display = 'block';
+  const brandTitle = `Your AI Work Partner — ${currentState.employee.name}`;
+  document.getElementById('companionTitle').textContent = brandTitle;
+  document.getElementById('companionSub').textContent = `Trained on ${currentState.employee.name}'s captured context (${currentState.transitionId}) — ask it anything about the role.`;
+  document.getElementById('successorAvatar').textContent = currentState.successor.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('successorName').textContent = currentState.successor.name;
+  document.getElementById('successorRole').textContent = `Incoming · ${currentState.employee.role || 'role not on file'}`;
+  document.getElementById('checkinSub').textContent = `Answering these keeps ${currentState.employee.name}'s context current now that they're gone — this is how the knowledge pack stays alive.`;
+  renderTrainingProgress();
+}
+
+function renderChips(){
+  document.getElementById('chips').innerHTML = starterQuestions.map(q=>
+    `<div class="chip" onclick="askQuestion('${q.replace(/'/g,"\\'")}')">${q}</div>`
+  ).join('');
+}
+
+function findAnswer(q){
+  const res = LegacyAIState.findAnswer(q, currentState);
+  const src = res.src ? `${res.src} · ${res.confidence} confidence` : null;
+  return {a: res.text, src};
+}
+
+function renderChat(){
+  const log = document.getElementById('chatlog');
+  if(chatHistory.length===0){
+    log.innerHTML = `<div class="footnote">No questions asked yet — try one of the suggestions above.</div>`;
+    return;
+  }
+  log.innerHTML = chatHistory.map(m => `
+    <div class="msg ${m.role}">
+      <div class="bubble-avatar">${m.role==='bot' ? '<i class="ti ti-sparkles"></i>' : (currentState.successor ? currentState.successor.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() : 'ME')}</div>
+      <div class="bubble">${m.text}${m.src ? `<span class="src"><i class="ti ti-quote"></i> Source: ${m.src}</span>` : ''}</div>
+    </div>
+  `).join('');
+  log.scrollTop = log.scrollHeight;
+}
+
+function askQuestion(q){
+  chatHistory.push({role:'user', text:q});
+  const res = findAnswer(q);
+  chatHistory.push({role:'bot', text:res.a, src:res.src});
+  renderChat();
+}
+
+function sendMessage(){
+  const input = document.getElementById('chatInput');
+  const val = input.value.trim();
+  if(!val) return;
+  askQuestion(val);
+  input.value = '';
+}
+
+function renderQaGrid(){
+  document.getElementById('qaGrid').innerHTML = dailyQuestions.map((q,i)=>`
+    <div class="qa-item">
+      <label>${i+1}. ${q}</label>
+      <textarea id="q${i}" placeholder="Type your answer..."></textarea>
+    </div>
+  `).join('');
+}
+
+function renderEmailQuestions(){
+  document.getElementById('emailQuestions').innerHTML = dailyQuestions.map(q=>`<li>${q}</li>`).join('');
+}
+
+// Training runs for 10 days. Day count = number of completed daily
+// check-ins so far (capped at 10). This is what "Day X of 10" is based on.
+function renderTrainingProgress(){
+  const completed = brainroomEntries.length;
+  const day = Math.min(completed + (checkinDone ? 0 : 1), 10);
+  const banner = document.getElementById('checkinBanner');
+  if(completed >= 10){
+    banner.className = 'checkin-banner done';
+    banner.innerHTML = `<span><i class="ti ti-circle-check"></i> <b>10-day training complete</b> — ${completed} check-ins logged. You're fully onboarded.</span>`;
+  } else if(checkinDone){
+    banner.className = 'checkin-banner done';
+    banner.innerHTML = `<span><i class="ti ti-circle-check"></i> <b>Day ${completed} of 10 complete</b> — come back tomorrow for Day ${completed+1}.</span>`;
+  } else {
+    banner.className = 'checkin-banner';
+    banner.innerHTML = `<span><i class="ti ti-clock-hour-4"></i> <b>Day ${day} of 10 — today's 5 mandatory questions</b> not completed yet. If this stays open past 6 PM, Legacy AI emails you a reminder instead — every evening until Day 10 is done.</span>
+      <div style="display:flex; gap:8px;">
+        <button class="btn sm" onclick="scrollToCheckin()">Answer now</button>
+        <button class="btn sm" onclick="simulateMissed()">Simulate: not opened by 6 PM</button>
+      <button class="btn sm" onclick="sendRealReminderEmail()" title="Opens a real mailto: draft for demo day">Send real reminder email</button>
+      </div>`;
+  }
+}
+
+async function submitCheckin(){
+  const answers = dailyQuestions.map((q,i)=>document.getElementById('q'+i).value.trim());
+  if(answers.some(a=>!a)){ showToast('All 5 questions are mandatory — fill in every field.'); return; }
+  checkinDone = true;
+  const now = new Date();
+  const entry = {date: now.toLocaleDateString(), answers};
+  brainroomEntries.unshift(entry);
+  await LegacyAIState.appendDailyCheckIn(entry);
+  renderBrainroomLog();
+  renderTrainingProgress();
+  document.getElementById('emailPanel').style.display = 'none';
+  showToast('Saved to the database — no email reminder needed today.');
+}
+
+function renderBrainroomLog(){
+  const el = document.getElementById('brainroomLog');
+  if(brainroomEntries.length===0){ el.innerHTML=''; return; }
+  el.innerHTML = `<div class="footnote" style="margin-bottom:8px;">dailyCheckIn.entries (persisted, exportable):</div>` +
+    brainroomEntries.map(e => `<div class="br-entry"><b>${e.date}</b> — ${e.answers.length} answers appended</div>`).join('') +
+    `<div style="margin-top:10px;"><button class="btn sm" onclick="LegacyAIState.exportBrainroomJSON()"><i class="ti ti-download"></i> Export Brainroom JSON</button></div>`;
+}
+
+function scrollToCheckin(){
+  document.getElementById('checkinPanel').scrollIntoView({behavior:'smooth'});
+}
+
+function simulateMissed(){
+  if(checkinDone){ showToast('Check-in is already complete for today — no email needed.'); return; }
+  document.getElementById('emailFallbackHdr').innerHTML = `From: <b>legacy-ai@razorpay.com</b> · To: <b>${currentState.successor ? currentState.successor.email : '—'}</b> · Subject: <b>Your 5 daily check-in questions — Legacy AI</b>`;
+  document.getElementById('emailPanel').style.display = 'block';
+  document.getElementById('emailPanel').scrollIntoView({behavior:'smooth'});
+  showToast('Simulated 6 PM cutoff reached — reminder email sent. This repeats every evening until the day\'s check-in is done.');
+}
+
+// Demo-day option: opens a real mailto: draft with the same 5 questions as
+// the simulated email-fallback panel, instead of just showing the mock box.
+function sendRealReminderEmail(){
+  if(checkinDone){ showToast('Check-in is already complete for today — no email needed.'); return; }
+  if(!currentState.successor){ showToast('No successor assigned to this transition yet.'); return; }
+  const to = prompt('Send the real missed-checkin reminder to:', currentState.successor.email);
+  if(!to) return;
+  const subject = `Your 5 daily check-in questions — Legacy AI`;
+  const body = `Hi ${currentState.successor.name.split(' ')[0]},\n\n`
+    + `You haven't opened your Legacy AI companion today. Here are your 5 mandatory check-in questions — `
+    + `reply directly to this email or open the companion to answer them there:\n\n`
+    + dailyQuestions.map((q,i)=>`${i+1}. ${q}`).join('\n');
+  window.location.href = LegacyAIState.buildMailto(to, subject, body);
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+async function init(){
+  currentState = await LegacyAIState.get();
+  brainroomEntries = currentState.dailyCheckIn.slice();
+  document.getElementById('loginTitle').textContent = `Your AI Work Partner — ${currentState.employee.name}`;
+  renderChips();
+  renderChat();
+  renderQaGrid();
+  renderEmailQuestions();
+}
+
+init();
+</script>
+</body>
+</html>
