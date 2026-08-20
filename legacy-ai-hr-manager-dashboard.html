@@ -183,6 +183,12 @@
         <textarea id="csvPasteInput" rows="5" style="width:100%; font-family:monospace; font-size:12.5px;" placeholder="email,name,title,manager_email,is_hr,q1_link,q2_link,q3_link,exp_link&#10;jane.doe@razorpay.com,Jane Doe,PM,manager@razorpay.com,0,,,,"></textarea>
       </div>
       <div class="help"><i class="ti ti-info-circle"></i> Header row must be exactly: <code>email, name, title, manager_email, is_hr, q1_link, q2_link, q3_link, exp_link</code>. Ask Claude to read the Sheet and give you this text to paste. Either sync method adds/updates people by email — it never deletes anyone, even if a row disappears.</div>
+
+      <div class="field" style="grid-column:1/-1; margin-top:8px;">
+        <label>Or upload a .csv file exported from the Sheet</label>
+        <input type="file" id="csvFileInput" accept=".csv,text/csv" onchange="onCsvFileChosen(this)">
+      </div>
+      <div class="help"><i class="ti ti-info-circle"></i> In the Sheet: File → Download → Comma-separated values (.csv), then pick that file here — same header requirement as above. <b>Must be a real .csv file</b>, not .xlsx — there's no spreadsheet-binary parser in this build, only plain-text CSV.</div>
     </div>
     <div class="form-actions">
       <button class="btn primary" onclick="syncDirectoryNow()"><i class="ti ti-cloud-download"></i> Sync from link</button>
@@ -201,6 +207,10 @@
           <select id="f-employee" onchange="onEmployeePicked()">
             <option value="">Select an employee…</option>
           </select>
+          <p class="footnote" style="margin:2px 0 0;">
+            Don't see them, or their doc links are wrong? <a href="#" onclick="toggleDirectoryPanel(); return false;">Sync the directory from a Google Sheet</a>
+            — or use "Upload"/"Replace" on any doc row below once you've picked them.
+          </p>
         </div>
 
         <div class="directory-preview" id="directoryPreview"></div>
@@ -515,6 +525,29 @@ async function refreshDirectoryDropdown(){
   });
 }
 
+// Reads a chosen .csv file as text and feeds it straight into the exact
+// same sync path as "Sync from pasted data" below — no new backend
+// endpoint, no CSV-parsing code duplicated. Deliberately does NOT accept
+// .xlsx: parsing a real spreadsheet binary needs a library this
+// zero-dependency backend doesn't have, so this only reads plain text.
+function onCsvFileChosen(inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  if(!file) return;
+  if(!/\.csv$/i.test(file.name)){
+    showToast('Please choose a .csv file — .xlsx and other formats aren\'t supported here.');
+    inputEl.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = async () => {
+    document.getElementById('csvPasteInput').value = String(reader.result || '');
+    await syncDirectoryFromPaste();
+    inputEl.value = '';
+  };
+  reader.onerror = () => showToast('Could not read that file.');
+  reader.readAsText(file);
+}
+
 async function syncDirectoryFromPaste(){
   const csvText = document.getElementById('csvPasteInput').value.trim();
   if(!csvText){ showToast('Paste the sheet data first.'); return; }
@@ -555,17 +588,36 @@ function onEmployeePicked(){
   const preview = document.getElementById('directoryPreview');
   directoryChunks = [];
   directoryChunksEmail = null;
+  lastScanResults = [];
   if(!email){ preview.classList.remove('show'); preview.innerHTML=''; return; }
   const u = directory.find(d => d.email === email);
   if(!u){ preview.classList.remove('show'); return; }
   const manager = directory.find(d => d.email === u.managerEmail);
-  const docRow = (label, field, link) => {
-    if (link) return `<div class="row"><b>${label}</b> <a href="${link}" target="_blank">${link}</a></div>`;
-    return `<div class="row"><b>${label}</b> <span class="missing">not on file</span>
+  // A stored value only counts as a real, clickable link if it's actually a
+  // URL. Seed/placeholder data (e.g. "Dummy: April '25 Performance review...")
+  // is truthy but not a link — treating it as one hid the upload option
+  // behind what looked like a working doc, which is exactly what was
+  // confusing about this panel. Anything that isn't http(s) is treated the
+  // same as "not on file" below.
+  const isRealLink = (v) => typeof v === 'string' && /^https?:\/\//i.test(v.trim());
+  const uploadControl = (field) => `
       <label class="btn sm" style="margin-left:8px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
         <i class="ti ti-upload"></i> Upload
         <input type="file" style="display:none" onchange="uploadMissingDoc('${u.email}','${field}',this)">
-      </label>
+      </label>`;
+  const docRow = (label, field, link) => {
+    if (isRealLink(link)) {
+      // Still offer "Replace" even for a real link — a doc can be a valid
+      // URL and still fail to scan (private sharing, wrong doc, etc.), and
+      // the previous version gave no way to fix that without leaving this
+      // panel.
+      return `<div class="row"><b>${label}</b> <a href="${link}" target="_blank">${link}</a>
+        <span style="margin-left:8px;">${uploadControl(field).replace('Upload','Replace')}</span>
+      </div>`;
+    }
+    const placeholderNote = link ? ` <span class="missing">(placeholder text, not a real link)</span>` : '';
+    return `<div class="row"><b>${label}</b> <span class="missing">not on file${placeholderNote}</span>
+      ${uploadControl(field)}
     </div>`;
   };
   preview.innerHTML = `
@@ -599,10 +651,13 @@ function onEmployeePicked(){
   preview.classList.add('show');
 }
 
+let lastScanResults = [];
+
 async function scanDirectoryDocs(email){
   showToast('Scanning documents...');
   try {
     const { results } = await LegacyAIState.syncEmployeeDocs(email);
+    lastScanResults = results;
     const ok = results.filter(r=>r.status==='ok').length;
     const missing = results.filter(r=>r.status==='missing').length;
     const err = results.filter(r=>r.status==='error').length;
@@ -615,21 +670,32 @@ async function scanDirectoryDocs(email){
   }
 }
 
+// Turns the aggregate "X couldn't be fetched" toast into something you can
+// actually act on — which field, and why, right above the excerpts box.
+function renderScanErrors(){
+  const errors = lastScanResults.filter(r => r.status === 'error');
+  if(errors.length === 0) return '';
+  return `<div style="margin-top:6px;">${errors.map(r => `
+    <div class="footnote" style="margin:2px 0; color:var(--red);"><i class="ti ti-alert-triangle"></i> <b>${r.field}</b>: ${escapeHtmlDash(r.message)}</div>
+  `).join('')}</div>`;
+}
+
 function renderDirectoryExcerpts(){
   const el = document.getElementById('directoryExcerpts');
   const tagSel = document.getElementById('docTagFilter');
   if(!el || !tagSel) return;
   const tag = tagSel.value;
   const filtered = tag ? directoryChunks.filter(c=>c.tags.includes(tag)) : directoryChunks;
-  if(directoryChunks.length === 0){
+  const errorsHtml = renderScanErrors();
+  if(directoryChunks.length === 0 && lastScanResults.length === 0){
     el.innerHTML = `<p class="footnote" style="margin:4px 0 0;">Not scanned yet — click "Scan documents for excerpts" above.</p>`;
     return;
   }
   if(filtered.length === 0){
-    el.innerHTML = `<p class="footnote" style="margin:4px 0 0;">No excerpts matched this topic.</p>`;
+    el.innerHTML = errorsHtml + `<p class="footnote" style="margin:4px 0 0;">${directoryChunks.length === 0 ? 'Nothing readable — see the issue(s) above. Use "Upload" or "Replace" on the doc row to fix, then scan again.' : 'No excerpts matched this topic.'}</p>`;
     return;
   }
-  el.innerHTML = filtered.slice(0, 8).map(c => `
+  el.innerHTML = errorsHtml + filtered.slice(0, 8).map(c => `
     <div style="background:#fff; border:1px solid var(--border); border-radius:6px; padding:6px 9px; margin-top:5px; font-size:12.5px;">
       <b style="text-transform:uppercase; font-size:10px; color:var(--text-3);">${c.docField}</b> ${escapeHtmlDash(c.text)}
     </div>
