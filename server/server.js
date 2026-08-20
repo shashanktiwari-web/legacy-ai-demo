@@ -20,6 +20,71 @@ const store = require('./db');
 const PORT = process.env.PORT || 3000;
 const FRONTEND_DIR = path.join(__dirname, '..'); // legacy-ai-*.html live one level up from /server
 
+// ---------------------------------------------------------------------
+// Gemini-backed companion answers — the one genuinely load-bearing AI step
+// in this app. Everything else (doc-search keyword tagging, successor Q&A
+// word-overlap scoring) is deliberately NOT AI, honestly labeled as such.
+// This is a real model call: given the transition's captured handover
+// items + context-capture answers as grounding, Gemini decides how to
+// answer (or honestly declines) instead of a lookup table scoring word
+// overlap. Requires GEMINI_API_KEY as an env var — never in client code.
+// ---------------------------------------------------------------------
+
+const GEMINI_MODEL = 'gemini-2.5-flash';
+
+function buildGeminiContext(state) {
+  const items = (state.validationItems || []).map(v =>
+    `- ${v.item}: ${v.desc} Current status: ${v.curStatus}. Stakeholders: ${v.stakeholders}.`
+  ).join('\n');
+  const qa = (state.contextQuestions || []).map(q => {
+    const saved = (state.contextAnswers || []).find(a => a.item === q.item);
+    return `Q: ${q.q}\nA: ${saved ? saved.a : q.dummy}`;
+  }).join('\n\n');
+  return `Handover items:\n${items || '(none captured yet)'}\n\nCaptured context Q&A:\n${qa || '(none captured yet)'}`;
+}
+
+// Returns { text, src, mode: 'ai' } on success, or { text: null, error,
+// mode: 'unavailable' } if the key is missing or the call fails — callers
+// (the client) should fall back to the local keyword-overlap answer in
+// that case, not hide the gap or pretend the AI path worked.
+async function askGemini(question, state) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { text: null, error: 'GEMINI_API_KEY is not configured on the server.', mode: 'unavailable' };
+  }
+  if (!question || !question.trim()) {
+    return { text: 'Ask me something about the role — e.g. approvals, risks, or people to know.', src: null, mode: 'ai' };
+  }
+  const context = buildGeminiContext(state);
+  const employeeName = state.employee ? state.employee.name : 'the outgoing employee';
+  const prompt = `You are a knowledge-transfer assistant helping a successor take over ${employeeName}'s role. `
+    + `Answer the question using ONLY the facts below. If the facts don't cover it, say so honestly and suggest `
+    + `checking with the manager or outgoing employee directly — never invent an answer. Keep it to 2-4 sentences.\n\n`
+    + `${context}\n\nQuestion: ${question}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      return { text: null, error: `Gemini API error (HTTP ${res.status}): ${errText.slice(0, 200)}`, mode: 'unavailable' };
+    }
+    const data = await res.json();
+    const text = data.candidates && data.candidates[0] && data.candidates[0].content
+      && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+      && data.candidates[0].content.parts[0].text;
+    if (!text) {
+      return { text: null, error: 'Gemini returned no answer (possibly blocked by a safety filter).', mode: 'unavailable' };
+    }
+    return { text: text.trim(), src: 'Generated live by Gemini from captured handover context', mode: 'ai' };
+  } catch (e) {
+    return { text: null, error: 'Could not reach Gemini: ' + e.message, mode: 'unavailable' };
+  }
+}
+
 // Where uploaded self-review / manager-expectations docs land when there's
 // no existing Google Doc link to use instead. Lives inside FRONTEND_DIR so
 // the existing static-file serving below already covers /uploads/* for
@@ -202,6 +267,18 @@ async function handleApi(req, res, pathname, searchParams) {
       const body = await readBody(req);
       store.updateValidationItem(parts[2], Number(parts[4]), body);
       return sendJson(res, 200, { ok: true });
+    }
+
+    // POST /api/transitions/:id/companion-ask — real Gemini-generated
+    // answer, grounded in this transition's captured context. See the
+    // long comment above askGemini() for why this is the one genuinely
+    // load-bearing AI step in the app.
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'transitions' && parts[2] && parts[3] === 'companion-ask') {
+      const body = await readBody(req);
+      const state = store.getFullTransitionState(parts[2]);
+      if (!state) return sendJson(res, 404, { error: 'Transition not found' });
+      const answer = await askGemini(body.question, state);
+      return sendJson(res, 200, answer);
     }
 
     // POST /api/transitions/:id/context-answers
