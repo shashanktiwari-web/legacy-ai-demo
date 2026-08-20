@@ -229,6 +229,17 @@ const LegacyAIState = (() => {
     return apiSend('PATCH', `/api/transitions/${id}`, partial);
   }
 
+  // Drafts (or re-drafts) this transition's handover items from the
+  // employee's real linked documents via the server's Gemini call — see
+  // askGeminiForValidationItems() in server.js. Returns
+  // { ok:true, count, fieldErrors } or { ok:false, error, fieldErrors }.
+  // Unlike most calls here this never throws on a "soft" failure (e.g.
+  // no readable docs, or Gemini unavailable) — callers should check
+  // `.ok` rather than wrapping this in try/catch alone.
+  async function generateValidationItems(trId) {
+    return apiSend('POST', `/api/transitions/${trId}/generate-items`, {});
+  }
+
   // ---------------------------------------------------------------------
   // Knowledge-pack generation — pure function of whatever `state` object
   // is passed in (same shape whether it came from the API or a test
@@ -516,7 +527,7 @@ const LegacyAIState = (() => {
     listDirectory, getDirectoryUser, listTransitions, createTransition, updateTransitionById,
     getDirectorySource, syncDirectory, syncDirectoryFromPastedCsv, uploadDirectoryDoc, getGoogleStatus,
     listHrEmails, getTodayBatch, listBatches, submitBatch, reviewBatch,
-    syncEmployeeDocs, getDocChunks, askCompanion,
+    syncEmployeeDocs, getDocChunks, askCompanion, generateValidationItems,
     buildAssets, findAnswer, exportBrainroomJSON, getFullState, buildMailto,
   };
 })();

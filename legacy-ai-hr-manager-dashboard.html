@@ -393,21 +393,57 @@ function actionCell(row){
   const exportBtn = session.role==='hr'
     ? `<button class="btn sm" onclick="LegacyAIState.exportBrainroomJSON('${trId}')" title="Export Brainroom JSON"><i class="ti ti-download"></i></button>`
     : '';
+  // Drafts (or re-drafts) this transition's Handover Validation Dashboard
+  // items from the employee's real linked docs via Gemini — this is what
+  // makes that dashboard populated for anyone, not just the hardcoded
+  // TR-1042 (Alisha) demo data. Only shown once at least one doc is on
+  // file; a partial set of docs still works, just drafts from what's there.
+  const hasAnyDoc = row.q1 || row.q2 || row.q3 || row.exp;
+  const genBtn = hasAnyDoc
+    ? `<button class="btn sm" onclick="generateItems('${trId}')" title="Draft handover items with AI from this employee's linked docs"><i class="ti ti-sparkles"></i> AI: Draft items</button>`
+    : '';
 
   if(row.status === 'sent'){
     const previewLink = `<a href="${LegacyAIState.linkTo('legacy-ai-employee-validation-dashboard.html', trId)}" target="_blank" class="btn sm"><i class="ti ti-external-link"></i> Preview employee link</a>`;
-    return `<div style="display:flex; gap:4px; flex-wrap:wrap;">${previewLink}${mgrBtn}${exportBtn}</div>`;
+    return `<div style="display:flex; gap:4px; flex-wrap:wrap;">${previewLink}${genBtn}${mgrBtn}${exportBtn}</div>`;
   }
   if(row.status === 'done'){
-    return `<div style="display:flex; gap:4px; flex-wrap:wrap;">${mgrBtn}${exportBtn}</div>`;
+    return `<div style="display:flex; gap:4px; flex-wrap:wrap;">${genBtn}${mgrBtn}${exportBtn}</div>`;
   }
   const canSend = row.status==='ready';
   return `<div style="display:flex; gap:4px; flex-wrap:wrap;">
     <button class="btn sm" onclick="sendInitiationEmail('${trId}')" title="Real email: kick off this transition with the employee"><i class="ti ti-rocket"></i></button>
     <button class="btn sm ${canSend?'primary':''}" ${canSend?'':'disabled'} onclick="sendToEmployee('${trId}')"><i class="ti ti-mail"></i> Notify employee</button>
     <button class="btn sm" ${canSend?'':'disabled'} onclick="sendRealEmail('${trId}')" title="Opens a real mailto: draft for demo day"><i class="ti ti-send"></i></button>
+    ${genBtn}
     ${exportBtn}
   </div>`;
+}
+
+// Reads whatever real docs are on file for this transition's employee and
+// asks Gemini to draft handover items from them (see
+// askGeminiForValidationItems() in server.js) — replacing any existing,
+// not-yet-validated items for this transition. Requires an explicit click
+// + confirm, same pattern as every other doc-fetching/AI action in this
+// app: nothing happens silently.
+async function generateItems(trId){
+  const row = rowById(trId);
+  const label = row ? row.employeeName : trId;
+  if(!confirm(`Draft handover items with AI from ${label}'s linked documents? This replaces any existing items for this transition that haven't been validated yet.`)) return;
+  showToast('Reading linked documents and drafting items with AI...');
+  try {
+    const result = await LegacyAIState.generateValidationItems(trId);
+    if(!result.ok){
+      showToast('Could not draft items: ' + result.error);
+      return;
+    }
+    let msg = `Drafted ${result.count} handover item${result.count===1?'':'s'} for ${label} from their linked docs.`;
+    const errs = (result.fieldErrors||[]).filter(e=>e.status==='error');
+    if(errs.length) msg += ` ${errs.length} doc${errs.length>1?'s':''} couldn't be read — check the doc scan in the Directory panel for details.`;
+    showToast(msg);
+  } catch (e) {
+    showToast('Could not draft items: ' + e.message);
+  }
 }
 
 function renderStats(){

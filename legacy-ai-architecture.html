@@ -54,14 +54,15 @@
   <div class="panel">
     <div class="panel-head"><i class="ti ti-sparkles"></i><b>Where the real AI is</b></div>
     <div class="panel-body">
-      <p>Exactly one feature makes a live model call: the <b>Successor Companion</b> chat (Step 6). Everything
-      the successor types goes to a real, running LLM — it is not answering from a script.</p>
+      <p>Two features make live model calls — both server-side, both Google <b>Gemini 3.6 Flash</b> via the
+      Gemini <code>generateContent</code> API, API key never reaching the browser:</p>
       <table>
-        <tr><th>Model</th><td>Google <b>Gemini 3.6 Flash</b>, called server-side via the Gemini <code>generateContent</code> API</td></tr>
-        <tr><th>Where it runs</th><td>Node backend (<code>server.js</code>) — the API key never reaches the browser</td></tr>
-        <tr><th>Input</th><td>The successor's question + that specific transition's live handover items and captured context Q&A</td></tr>
-        <tr><th>Output</th><td>A generated answer, or an honest "I don't know, ask your manager" if the facts don't cover it</td></tr>
+        <tr><th>Handover item drafting</th><td>HR/Manager dashboard's "AI: Draft items" button (Step 1). Reads the employee's real linked self-review + manager-expectations docs and asks Gemini to extract concrete handover items — told explicitly to write "Not specified in docs" rather than invent a stakeholder, status, or project that isn't actually in the text. This is what populates the Handover Validation Dashboard (Step 2) for any real employee, not just the seeded TR-1042 (Alisha) demo data.</td></tr>
+        <tr><th>Successor Companion chat</th><td>Step 6. Everything the successor types goes to a real, running LLM, grounded in that transition's live (AI-drafted-then-validated) handover items and captured context Q&A — it is not answering from a script.</td></tr>
       </table>
+      <p class="hint" style="font-size:12.5px; color:var(--text-2); margin-top:8px;">Both are drafts, not
+      facts: item-drafting output sits as "pending" until the employee confirms/edits/disputes it (Step 2),
+      and the companion's answers are explicitly sourced so nothing is taken on faith.</p>
     </div>
   </div>
 
@@ -89,18 +90,21 @@
         <span class="pill not-ai">Doc search &amp; tagging</span>
         <span class="pill not-ai">Knowledge pack assembly</span>
         <span class="pill not-ai">Successor Q&amp;A fallback</span>
+        <span class="pill ai">Handover item drafting</span>
         <span class="pill ai">Successor Companion chat</span>
       </div>
-      <p>The doc-search feature (finding relevant excerpts in an employee's linked self-review docs) is
-      <b>keyword and tag matching</b> — no model call. The knowledge pack is <b>template assembly</b> over
-      validated data. The companion's fallback path (used if Gemini is unavailable) is
-      <b>keyword-overlap scoring</b>, not a second model.</p>
+      <p>The doc-search feature ("Scan documents for excerpts" — finding relevant excerpts in an employee's
+      linked docs to show alongside context-capture questions) is <b>keyword and tag matching</b> — no model
+      call, and a separate code path from item drafting above even though both read the same documents. The
+      knowledge pack is <b>template assembly</b> over validated data. The companion's fallback path (used if
+      Gemini is unavailable) is <b>keyword-overlap scoring</b>, not a second model.</p>
       <div class="honesty-box">
         <b>Why plain code instead of AI everywhere:</b> these steps deal with facts that must be exactly
         right — what an employee actually validated, what a manager actually approved. Using deterministic
-        matching there means zero hallucination risk on the facts that matter most. The one place we do use
-        a model is the one place judgment and phrasing genuinely help: turning captured facts into a
-        conversational answer.
+        matching there means zero hallucination risk on the facts that matter most. Both places we do use a
+        model produce a <b>draft that a human must check</b>, not a final fact: item-drafting output starts
+        as "pending" until the employee confirms/edits/disputes it, and the companion is instructed to say
+        "I don't know" rather than invent an answer the docs don't support.
       </div>
     </div>
   </div>
