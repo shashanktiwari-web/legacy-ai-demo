@@ -30,7 +30,7 @@ const FRONTEND_DIR = path.join(__dirname, '..'); // legacy-ai-*.html live one le
 // overlap. Requires GEMINI_API_KEY as an env var — never in client code.
 // ---------------------------------------------------------------------
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 function buildGeminiContext(state) {
   const items = (state.validationItems || []).map(v =>
