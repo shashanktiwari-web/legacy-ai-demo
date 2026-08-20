@@ -17,26 +17,24 @@
   .shell{display:flex;flex-direction:column;height:100%;}
 
   /* ---------------- Hero / pitch ---------------- */
-  /* flex-shrink:0 keeps the hero at its natural height no matter how tall its
-     copy gets — without this, a taller hero can starve .stage below it. */
-  .hero{flex-shrink:0;background:linear-gradient(135deg,#1b1e24,#2a2f3d);color:#fff;padding:22px 28px 20px;}
-  .hero-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:10px;}
-  .hero-brand{display:flex;align-items:center;gap:10px;}
+  /* Deliberately compact: every one of the 7 embedded pages below was built
+     assuming most of the viewport height is available. A tall hero starves
+     .stage and makes those pages need internal scrolling — so this stays a
+     single, dense strip instead of a full section, on purpose. flex-shrink:0
+     keeps it at its natural height no matter what. */
+  .hero{flex-shrink:0;background:linear-gradient(135deg,#1b1e24,#2a2f3d);color:#fff;padding:12px 24px;}
+  .hero-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  .hero-brand{display:flex;align-items:center;gap:10px;flex-shrink:0;}
   .hero .tag{font-size:11px;font-weight:600;color:#c9d0ff;background:rgba(255,255,255,0.12);padding:3px 9px;border-radius:999px;}
-  .hero h1{font-size:19px;font-weight:600;margin:0;}
-  .hero-actions{display:flex;gap:8px;}
+  .hero h1{font-size:16px;font-weight:600;margin:0;}
+  .hero-actions{display:flex;gap:8px;flex-shrink:0;}
   .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;padding:7px 12px;border-radius:8px;cursor:pointer;}
   .btn:hover{background:#f0f1f3;}
   .btn.on-dark{border-color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);color:#fff;}
   .btn.on-dark:hover{background:rgba(255,255,255,0.16);}
 
-  .hero-pitch{font-size:15px;line-height:1.55;color:#e4e6ee;max-width:760px;margin:6px 0 16px;}
+  .hero-pitch{font-size:13px;line-height:1.5;color:#dfe1ea;max-width:none;margin:8px 0 0;}
   .hero-pitch b{color:#fff;}
-
-  .hero-steps{display:flex;gap:10px;flex-wrap:wrap;}
-  .hero-step{flex:1;min-width:190px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;color:#dfe1ea;}
-  .hero-step .hs-num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:10.5px;font-weight:700;margin-right:6px;}
-  .hero-step b{color:#fff;display:block;font-size:13px;margin-bottom:2px;}
 
   /* ---------------- Tabs / stage ---------------- */
   .tabs{flex-shrink:0;display:flex;gap:6px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;}
@@ -74,17 +72,11 @@
       </div>
     </div>
     <p class="hero-pitch">
-      When someone leaves a role, the knowledge that made them good at it usually leaves with them —
-      undocumented approvals, unwritten risks, the "ask so-and-so" context no wiki ever captures.
-      <b>Legacy AI</b> captures that knowledge from the outgoing employee before they're gone, has their
-      manager validate it, and hands the successor an AI companion trained on that specific person's
-      real context — so it can actually answer "who approves this?" instead of pointing at a stale doc.
+      When someone leaves, the knowledge that made them good at their role usually leaves with them.
+      <b>Legacy AI</b> captures it, gets it manager-validated, and hands the successor an AI companion
+      grounded in that specific person's real context — <b>1. Capture → 2. Verify → 3. Hand off</b> to an
+      AI that can actually answer "who approves this?" (see Step 7, "How the AI works," for exactly what's real).
     </p>
-    <div class="hero-steps">
-      <div class="hero-step"><span class="hs-num">1</span><b>Capture</b>What's leaving, validated against real handover items — not guessed.</div>
-      <div class="hero-step"><span class="hs-num">2</span><b>Verify</b>Manager signs off daily, so nothing ships to the successor unchecked.</div>
-      <div class="hero-step"><span class="hs-num">3</span><b>Hand off</b>Successor asks a real AI, grounded in that context — see the "How the AI works" step for exactly what's real.</div>
-    </div>
   </div>
 
   <div class="tabs" id="tabs"></div>
