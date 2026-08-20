@@ -164,10 +164,12 @@
 
 <script src="legacy-ai-state.js"></script>
 <script>
-// Facts are no longer a fixed keyword->answer list. LegacyAIState.findAnswer
-// does real keyword/fuzzy retrieval over whatever is live in state right
-// now (validated handover items + context-capture answers) — edit an
-// answer upstream and the companion's response changes too.
+// Ask the companion tries a real Gemini call first (LegacyAIState.askCompanion
+// — server-side, grounded in this transition's live captured context; the
+// model decides how to answer, not a lookup table). If the AI call fails or
+// GEMINI_API_KEY isn't configured, it falls back to the local keyword-overlap
+// retrieval below (LegacyAIState.findAnswer) — clearly labeled as a fallback,
+// never silently hiding which path answered.
 
 let currentState = null;
 
@@ -243,19 +245,37 @@ function renderChat(){
   log.scrollTop = log.scrollHeight;
 }
 
-function askQuestion(q){
+async function askQuestion(q){
   chatHistory.push({role:'user', text:q});
-  const res = findAnswer(q);
+  chatHistory.push({role:'bot', text:'Thinking…', pending:true});
+  renderChat();
+
+  let res;
+  try {
+    const ai = await LegacyAIState.askCompanion(q, currentState.transitionId);
+    if(ai && ai.mode === 'ai' && ai.text){
+      res = {a: ai.text, src: ai.src};
+    } else {
+      const fb = findAnswer(q);
+      const reason = ai && ai.error ? ` (${ai.error})` : '';
+      res = {a: fb.a, src: `${fb.src ? fb.src + ' · ' : ''}keyword fallback — AI unavailable${reason}`};
+    }
+  } catch (e) {
+    const fb = findAnswer(q);
+    res = {a: fb.a, src: `${fb.src ? fb.src + ' · ' : ''}keyword fallback — AI unavailable (${e.message})`};
+  }
+
+  chatHistory.pop(); // remove the "Thinking…" placeholder
   chatHistory.push({role:'bot', text:res.a, src:res.src});
   renderChat();
 }
 
-function sendMessage(){
+async function sendMessage(){
   const input = document.getElementById('chatInput');
   const val = input.value.trim();
   if(!val) return;
-  askQuestion(val);
   input.value = '';
+  await askQuestion(val);
 }
 
 function renderQaGrid(){
