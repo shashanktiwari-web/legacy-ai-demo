@@ -141,6 +141,23 @@ async function handleApi(req, res, pathname, searchParams) {
       return sendJson(res, 200, { url, user: updated });
     }
 
+    // POST /api/directory/:email/sync-docs — re-fetch and re-tag all four
+    // of this employee's linked docs (keyword matching, not AI — see the
+    // comment above syncEmployeeDocs in db.js). Must come before the
+    // generic GET /:email route below, same reason as /upload above.
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'directory' && parts[2] && parts[3] === 'sync-docs') {
+      const results = await store.syncEmployeeDocs(decodeURIComponent(parts[2]));
+      return sendJson(res, 200, { results });
+    }
+
+    // GET /api/directory/:email/doc-chunks?tag=stake — keyword-matched
+    // excerpts from that employee's docs, optionally filtered to one tag.
+    if (req.method === 'GET' && parts[0] === 'api' && parts[1] === 'directory' && parts[2] && parts[3] === 'doc-chunks') {
+      const tag = searchParams.get('tag');
+      const chunks = store.getDocChunks(decodeURIComponent(parts[2]), tag || null);
+      return sendJson(res, 200, chunks);
+    }
+
     // GET /api/directory/:email
     if (req.method === 'GET' && parts[0] === 'api' && parts[1] === 'directory' && parts[2]) {
       const u = store.userByEmail(decodeURIComponent(parts[2]));
@@ -199,6 +216,44 @@ async function handleApi(req, res, pathname, searchParams) {
       const body = await readBody(req);
       store.saveContextReview(parts[2], body.item, body.status, body.note);
       return sendJson(res, 200, { ok: true });
+    }
+
+    // GET /api/transitions/:id/context-batches — list all daily question
+    // batches for a transition (most recent first).
+    if (req.method === 'GET' && parts[0] === 'api' && parts[1] === 'transitions' && parts[2] && parts[3] === 'context-batches' && !parts[4]) {
+      return sendJson(res, 200, store.listBatches(parts[2]));
+    }
+
+    // POST /api/transitions/:id/context-batches/today — get or create
+    // today's batch of up to 10 questions for this transition.
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'transitions' && parts[2] && parts[3] === 'context-batches' && parts[4] === 'today') {
+      const batch = store.getOrCreateTodayBatch(parts[2]);
+      const questions = store.getBatchQuestions(parts[2], batch.batch_date);
+      return sendJson(res, 200, { batchDate: batch.batch_date, status: batch.status, questions });
+    }
+
+    // POST /api/transitions/:id/context-batches/:date/submit — employee
+    // has answered every question in that day's batch; hand it to the
+    // manager's queue.
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'transitions' && parts[2] && parts[3] === 'context-batches' && parts[4] && parts[5] === 'submit') {
+      const updated = store.submitBatch(parts[2], decodeURIComponent(parts[4]));
+      return sendJson(res, 200, updated);
+    }
+
+    // POST /api/transitions/:id/context-batches/:date/review — manager has
+    // gone through every item in that day's batch. Body: { outcome:
+    // 'approved' | 'needs_revision' }.
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'transitions' && parts[2] && parts[3] === 'context-batches' && parts[4] && parts[5] === 'review') {
+      const body = await readBody(req);
+      const updated = store.reviewBatch(parts[2], decodeURIComponent(parts[4]), body.outcome);
+      return sendJson(res, 200, updated);
+    }
+
+    // GET /api/hr-emails — every directory user flagged is_hr, so the
+    // "submit for manager review" step can cc HR without hardcoding a
+    // single address.
+    if (req.method === 'GET' && pathname === '/api/hr-emails') {
+      return sendJson(res, 200, store.listHrEmails());
     }
 
     // POST /api/transitions/:id/daily-checkins
