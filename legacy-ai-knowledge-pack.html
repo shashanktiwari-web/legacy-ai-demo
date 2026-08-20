@@ -29,15 +29,29 @@
   .banner.warn{background:var(--amber-bg);border-color:#f0d9ac;color:#7a4d0c;}
 
   .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-  .asset-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;cursor:pointer;transition:.15s;}
-  .asset-card:hover{border-color:var(--border-strong);}
+  .asset-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(16,24,40,.03);}
+  .asset-card:hover{border-color:var(--border-strong);box-shadow:0 4px 10px rgba(16,24,40,.06);transform:translateY(-1px);}
   .asset-card.open{border-color:var(--accent);}
-  .asset-head{display:flex;align-items:flex-start;gap:10px;}
-  .asset-icon{width:32px;height:32px;border-radius:8px;background:var(--accent-bg);color:#2a3fbf;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .asset-head{display:flex;align-items:flex-start;gap:12px;}
+  .asset-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px;color:#fff;box-shadow:inset 0 -6px 10px rgba(0,0,0,.08);}
   .asset-title{font-weight:600;font-size:13.5px;}
   .asset-teaser{font-size:12px;color:var(--text-2);margin-top:3px;}
   .chevron{margin-left:auto;color:var(--text-3);transition:.2s;}
   .asset-card.open .chevron{transform:rotate(180deg);}
+
+  /* Tile colors — one gradient per knowledge-asset type, purely CSS (no
+     external image hosting), so each card is visually distinct at a glance. */
+  .tile-exec{background:linear-gradient(135deg,#4f6bff,#2a3fbf);}
+  .tile-ktguide{background:linear-gradient(135deg,#22b8a6,#0d8f80);}
+  .tile-playbook{background:linear-gradient(135deg,#8b7cf6,#534ab7);}
+  .tile-stake{background:linear-gradient(135deg,#ec6fb0,#b3468f);}
+  .tile-decisions{background:linear-gradient(135deg,#6c78e8,#3f4bb0);}
+  .tile-risk{background:linear-gradient(135deg,#f0765a,#c93b3b);}
+  .tile-timeline{background:linear-gradient(135deg,#38bce0,#1a8fb0);}
+  .tile-faq{background:linear-gradient(135deg,#ffbf5c,#ba7517);}
+  .tile-tips{background:linear-gradient(135deg,#ffd83d,#d9a300);}
+  .tile-best{background:linear-gradient(135deg,#3ecf8e,#1d9e75);}
+  .tile-cheat{background:linear-gradient(135deg,#8a94a6,#5f5e5a);}
 
   .detail{max-width:1100px;margin:16px auto 0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 26px;display:none;}
   .detail.show{display:block;}
@@ -143,7 +157,7 @@ function sendRealEmailToSuccessor(){
     + `If you don't open it by 6 PM, you'll get a reminder email every evening until Day 10 is done.\n\n`
     + `Open it here (demo link — open the successor companion in your browser):\n`
     + `${LegacyAIState.linkTo('legacy-ai-successor-companion.html')}`;
-    window.open(LegacyAIState.buildMailto(to, subject, body), '_blank');
+  window.open(LegacyAIState.buildMailto(to, subject, body), '_blank');
 }
 
 function showToastFallback(msg){ alert(msg); }
@@ -153,7 +167,7 @@ function renderGrid(){
   grid.innerHTML = assets.map(a => `
     <div class="asset-card ${openKey===a.key?'open':''}" onclick="toggle('${a.key}')">
       <div class="asset-head">
-        <div class="asset-icon"><i class="ti ${a.icon}"></i></div>
+        <div class="asset-icon tile-${a.key}"><i class="ti ${a.icon}"></i></div>
         <div>
           <div class="asset-title">${a.title}</div>
           <div class="asset-teaser">${a.teaser}</div>

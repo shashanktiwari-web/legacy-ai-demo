@@ -30,7 +30,7 @@ const LegacyAIState = (() => {
     sessionStorage.setItem(SESSION_KEY, id);
   }
 
-    // Builds an absolute URL (not just a relative path) — required because
+  // Builds an absolute URL (not just a relative path) — required because
   // this same helper is used both for in-app <a href> links (where a
   // relative path would work fine) AND for links dropped into real email
   // bodies (where a relative path is meaningless — the recipient's email
@@ -135,6 +135,52 @@ const LegacyAIState = (() => {
 
   async function syncDirectoryFromPastedCsv(csvText) {
     return apiSend('POST', '/api/directory/sync-pasted', { csvText });
+  }
+
+  // Every directory user flagged as HR — used to cc HR automatically when
+  // an employee submits a day's answers for manager review.
+  async function listHrEmails() {
+    return apiGet('/api/hr-emails');
+  }
+
+  // ---------------------------------------------------------------------
+  // Document search — keyword-matched excerpts from an employee's real
+  // linked docs. NOT AI: no LLM call anywhere in this app. See the long
+  // comment above syncEmployeeDocs in db.js for the honest explanation of
+  // what this can and can't do.
+  // ---------------------------------------------------------------------
+
+  async function syncEmployeeDocs(email) {
+    return apiSend('POST', `/api/directory/${encodeURIComponent(email)}/sync-docs`, {});
+  }
+
+  async function getDocChunks(email, tag) {
+    const qs = tag ? `?tag=${encodeURIComponent(tag)}` : '';
+    return apiGet(`/api/directory/${encodeURIComponent(email)}/doc-chunks${qs}`);
+  }
+
+  // ---------------------------------------------------------------------
+  // Daily question batches — up to 10 context-capture questions per day.
+  // trId is required here (unlike get()/patch() above) because these are
+  // also called from the Manager Action Center, which — like the HR
+  // dashboard — looks at one specific transition out of many, not "the
+  // current page's" transition.
+  // ---------------------------------------------------------------------
+
+  async function getTodayBatch(trId) {
+    return apiSend('POST', `/api/transitions/${trId}/context-batches/today`, {});
+  }
+
+  async function listBatches(trId) {
+    return apiGet(`/api/transitions/${trId}/context-batches`);
+  }
+
+  async function submitBatch(trId, batchDate) {
+    return apiSend('POST', `/api/transitions/${trId}/context-batches/${encodeURIComponent(batchDate)}/submit`, {});
+  }
+
+  async function reviewBatch(trId, batchDate, outcome) {
+    return apiSend('POST', `/api/transitions/${trId}/context-batches/${encodeURIComponent(batchDate)}/review`, { outcome });
   }
 
   // Upload a missing self-review/manager-expectations doc directly, for
@@ -384,8 +430,10 @@ const LegacyAIState = (() => {
   // in the page; the presenter reviews and hits send themselves.
   // ---------------------------------------------------------------------
 
-  function buildMailto(to, subject, body) {
-    const params = new URLSearchParams({ view: 'cm', fs: '1', to, su: subject, body });
+  function buildMailto(to, subject, body, cc) {
+    const paramObj = { view: 'cm', fs: '1', to, su: subject, body };
+    if (cc) paramObj.cc = cc;
+    const params = new URLSearchParams(paramObj);
     return `https://mail.google.com/mail/?${params.toString()}`;
   }
 
@@ -394,8 +442,22 @@ const LegacyAIState = (() => {
   // by a fetch instead of a synchronous localStorage read.
   // ---------------------------------------------------------------------
 
-  async function exportBrainroomJSON() {
-    const state = await get();
+  // trId is optional — same reasoning as linkTo(): without it, this falls
+  // back to currentTransitionId() (fine for the knowledge-pack page,
+  // which is always opened for one specific transition), but the HR
+  // dashboard lists many transitions at once and must pass the row's id
+  // explicitly or this would silently fetch whatever transition happened
+  // to be in sessionStorage instead of the one HR actually asked about.
+  //
+  // Exported on its own (not just inlined into exportBrainroomJSON below)
+  // because other pages — e.g. the HR dashboard's pending-count badges —
+  // need the raw state object without triggering a file download.
+  async function getFullState(trId) {
+    return trId ? await apiGet(`/api/transitions/${trId}/full`) : await get();
+  }
+
+  async function exportBrainroomJSON(trId) {
+    const state = await getFullState(trId);
     const shaped = {
       transitionId: state.transitionId,
       outgoingEmployee: state.employee,
@@ -430,6 +492,8 @@ const LegacyAIState = (() => {
     saveContextAnswer, saveContextReview, appendDailyCheckIn, updateValidationItem,
     listDirectory, getDirectoryUser, listTransitions, createTransition, updateTransitionById,
     getDirectorySource, syncDirectory, syncDirectoryFromPastedCsv, uploadDirectoryDoc,
-    buildAssets, findAnswer, exportBrainroomJSON, buildMailto,
+    listHrEmails, getTodayBatch, listBatches, submitBatch, reviewBatch,
+    syncEmployeeDocs, getDocChunks,
+    buildAssets, findAnswer, exportBrainroomJSON, getFullState, buildMailto,
   };
 })();

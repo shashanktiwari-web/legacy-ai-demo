@@ -53,6 +53,13 @@
 
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#1b1e24;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;max-width:520px;text-align:center;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .excerpts-card{margin-top:14px;padding:16px 18px;}
+  .excerpts-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+  .excerpts-title{font-size:13px;font-weight:600;}
+  .excerpt-item{background:#fafbfc;border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-top:8px;font-size:13px;line-height:1.5;}
+  .excerpt-src{display:inline-block;font-size:10.5px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.03em;margin-right:6px;}
+  .btn.sm{padding:6px 10px;font-size:12.5px;}
 </style>
 </head>
 <body>
@@ -81,17 +88,28 @@
     </div>
   </div>
 
+  <div class="card excerpts-card" id="excerptsCard" style="display:none;">
+    <div class="excerpts-head">
+      <div>
+        <div class="excerpts-title"><i class="ti ti-search"></i> Source excerpts from your documents</div>
+        <div class="hint" style="margin-top:2px;">Keyword-matched from your real self-review docs — not AI, just search. Verify anything before relying on it.</div>
+      </div>
+      <button class="btn sm" id="scanDocsBtn" onclick="scanMyDocuments()"><i class="ti ti-refresh"></i> Scan my documents</button>
+    </div>
+    <div id="excerptsList"></div>
+  </div>
+
   <div class="card done-card" id="emptyCard" style="display:none;">
     <i class="ti ti-info-circle" style="color:var(--text-3);"></i>
-    <h2>No context questions set up yet</h2>
-    <p class="sub">HR/manager haven't loaded context-capture questions for this transition yet. That's expected for anyone created directly from the directory in this demo — only the seeded TR-1042 (Alisha Leitao) scenario has them pre-loaded.</p>
+    <h2 id="emptyTitle">No context questions set up yet</h2>
+    <p class="sub" id="emptySub">HR/manager haven't loaded context-capture questions for this transition yet. That's expected for anyone created directly from the directory in this demo — only the seeded TR-1042 (Alisha Leitao) scenario has them pre-loaded.</p>
   </div>
 
   <div class="card done-card" id="doneCard" style="display:none;">
     <i class="ti ti-circle-check"></i>
-    <h2>Context capture complete</h2>
-    <p class="sub">All answers are logged. Before Legacy AI builds the Executive Summary, Stakeholder Map, Decision History, and Successor Playbook, your manager reviews and approves each answer — nothing gets baked into the knowledge pack unsigned-off.</p>
-    <div style="margin-top:18px;"><button class="btn primary" onclick="goToManagerReview()"><i class="ti ti-arrow-right"></i> Send for manager review</button></div>
+    <h2 id="doneTitle">Context capture complete</h2>
+    <p class="sub" id="doneSub">All answers are logged.</p>
+    <div style="margin-top:18px;" id="doneAction"></div>
   </div>
 
   <div class="log">
@@ -112,9 +130,90 @@ let questions = [];
 let idx = 0;
 let log = [];
 let currentFlagged = [];
+let trId = null;
+let mode = 'legacy'; // 'legacy' = TR-1042-style flat demo list; 'batch' = daily up-to-10-question batch
+let todayBatchDate = null;
+let docChunks = []; // keyword-matched excerpts from the employee's real docs — NOT AI, see legacy-ai-state.js
+
+function escapeHtmlLocal(str){
+  return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Re-fetches + re-tags the employee's real linked docs (keyword matching,
+// not AI) and reloads the cached excerpts. Requires an explicit click —
+// outbound doc fetches shouldn't happen silently on every page load.
+async function scanMyDocuments(){
+  const btn = document.getElementById('scanDocsBtn');
+  btn.disabled = true;
+  showToast('Scanning your documents...');
+  try {
+    const { results } = await LegacyAIState.syncEmployeeDocs(currentState.employee.email);
+    const okCount = results.filter(r => r.status === 'ok').length;
+    const missingCount = results.filter(r => r.status === 'missing').length;
+    const errorCount = results.filter(r => r.status === 'error').length;
+    docChunks = await LegacyAIState.getDocChunks(currentState.employee.email);
+    showToast(`Scanned your docs — ${okCount} readable, ${missingCount} not on file, ${errorCount} couldn't be fetched.`);
+    renderExcerpts();
+  } catch (e) {
+    showToast('Scan failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderExcerpts(){
+  const card = document.getElementById('excerptsCard');
+  const el = document.getElementById('excerptsList');
+  if(!card || !el) return;
+  if(questions.length === 0 || idx >= questions.length){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const feeds = questions[idx].feeds || [];
+  const matches = docChunks.filter(c => c.tags.some(t => feeds.includes(t))).slice(0, 3);
+  if(docChunks.length === 0){
+    el.innerHTML = `<p class="hint" style="margin-top:8px;">Not scanned yet — click "Scan my documents" to search your real self-review docs for excerpts related to this question.</p>`;
+  } else if(matches.length === 0){
+    el.innerHTML = `<p class="hint" style="margin-top:8px;">No matching excerpts found in your scanned docs for this question's topic.</p>`;
+  } else {
+    el.innerHTML = matches.map(c => `<div class="excerpt-item"><span class="excerpt-src">${c.docField}</span>${escapeHtmlLocal(c.text)}</div>`).join('');
+  }
+}
 
 function goToManagerReview(){
-  window.location.href = LegacyAIState.linkTo('legacy-ai-context-manager-review.html');
+  window.location.href = LegacyAIState.linkTo('legacy-ai-context-manager-review.html', trId);
+}
+
+// Batch mode only: one real email to the manager (cc HR) once today's batch
+// is fully answered. Requires an explicit click, same pattern as every
+// other "send" button in this app — nothing goes out silently.
+async function notifyManagerForReview(){
+  const emp = currentState.employee;
+  const mgr = currentState.manager;
+  let hrEmails = [];
+  try { hrEmails = await LegacyAIState.listHrEmails(); } catch(e) { /* non-fatal — email still goes to the manager */ }
+  const link = LegacyAIState.linkTo('legacy-ai-context-manager-review.html', trId);
+  const subject = `New context-capture answers ready for review — ${emp.name} (${trId}) — ${todayBatchDate}`;
+  const lines = questions.map(qq => {
+    const saved = currentState.contextAnswers.find(a=>a.item===qq.item);
+    return `Q: ${qq.q}\nA: ${saved ? saved.a : ''}`;
+  }).join('\n\n');
+  const body = `Hi ${mgr.name},\n\n${emp.name} answered today's ${questions.length} context-capture question${questions.length===1?'':'s'} (${todayBatchDate}) and sent them for your review:\n\n${lines}\n\nOpen the Manager Action Center to approve or flag: ${link}\n\n— Legacy AI`;
+  window.open(LegacyAIState.buildMailto(mgr.email, subject, body, hrEmails.join(',')), '_blank');
+  showToast("Opening Gmail with today's answers for your manager...");
+}
+
+function renderDoneCard(){
+  const title = document.getElementById('doneTitle');
+  const sub = document.getElementById('doneSub');
+  const action = document.getElementById('doneAction');
+  if(mode === 'batch'){
+    title.textContent = `Today's ${questions.length} question${questions.length===1?'':'s'} complete`;
+    sub.textContent = `Send these to your manager for review. If anything gets flagged you'll get one email today listing what to fix; otherwise you'll hear it's all approved. A fresh batch of questions is ready each day.`;
+    action.innerHTML = `<button class="btn primary" onclick="notifyManagerForReview()"><i class="ti ti-send"></i> Email manager for review</button>`;
+  } else {
+    title.textContent = 'Context capture complete';
+    sub.textContent = "All answers are logged. Before Legacy AI builds the Executive Summary, Stakeholder Map, Decision History, and Successor Playbook, your manager reviews and approves each answer — nothing gets baked into the knowledge pack unsigned-off.";
+    action.innerHTML = `<button class="btn primary" onclick="goToManagerReview()"><i class="ti ti-arrow-right"></i> Send for manager review</button>`;
+  }
 }
 
 // Anything the manager flagged in context-manager-review.html shows up
@@ -162,16 +261,26 @@ function renderQuestion(){
     document.getElementById('questionCard').style.display = 'none';
     document.getElementById('doneCard').style.display = 'none';
     document.getElementById('emptyCard').style.display = 'block';
+    if(mode === 'batch'){
+      document.getElementById('emptyTitle').textContent = "No fresh questions left today";
+      document.getElementById('emptySub').textContent = "Every question in the bank has already been asked on an earlier day for this transition. Check back once more are added, or head to Captured so far below to review past answers.";
+    } else {
+      document.getElementById('emptyTitle').textContent = 'No context questions set up yet';
+      document.getElementById('emptySub').textContent = "HR/manager haven't loaded context-capture questions for this transition yet. That's expected for anyone created directly from the directory in this demo — only the seeded TR-1042 (Alisha Leitao) scenario has them pre-loaded.";
+    }
     document.getElementById('progressLabel').textContent = 'No questions yet';
     document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('excerptsCard').style.display = 'none';
     return;
   }
   if(idx >= questions.length){
     document.getElementById('questionCard').style.display = 'none';
     document.getElementById('emptyCard').style.display = 'none';
+    renderDoneCard();
     document.getElementById('doneCard').style.display = 'block';
     document.getElementById('progressLabel').textContent = 'All questions complete';
     document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('excerptsCard').style.display = 'none';
     return;
   }
   document.getElementById('questionCard').style.display = 'block';
@@ -182,6 +291,7 @@ function renderQuestion(){
   document.getElementById('answerBox').value = (saved ? saved.a : item.dummy) || '';
   document.getElementById('progressLabel').textContent = `Question ${idx+1} of ${questions.length}`;
   document.getElementById('progressFill').style.width = `${(idx/questions.length)*100}%`;
+  renderExcerpts();
 }
 
 async function submitAnswer(){
@@ -194,6 +304,10 @@ async function submitAnswer(){
   await LegacyAIState.saveContextAnswer(questions[idx].item, questions[idx].q, val);
   currentState = await LegacyAIState.get();
   idx++;
+  if(mode === 'batch' && idx >= questions.length){
+    try { await LegacyAIState.submitBatch(trId, todayBatchDate); }
+    catch(e) { /* already submitted earlier today — fine, just re-visiting */ }
+  }
   renderQuestion();
   showToast('Saved to context-capture log.');
 }
@@ -219,10 +333,31 @@ function showToast(msg){
 }
 
 async function init(){
-  currentState = await LegacyAIState.get();
-  questions = currentState.contextQuestions;
-  document.getElementById('headerSub').textContent =
-    `${currentState.employee.name} · ${currentState.transitionId} — Legacy AI asks one contextual question at a time, drawn from your validated items, meeting notes, and public Slack threads. Every answer is written straight to the transition's context-capture log.`;
+  trId = LegacyAIState.currentTransitionId();
+  const initialState = await LegacyAIState.get();
+  const hasLegacyFlat = initialState.contextQuestions.some(q => !q.batchDate);
+
+  if(hasLegacyFlat){
+    // TR-1042-style demo transition — keep the original flat, undated
+    // question list exactly as it always worked.
+    mode = 'legacy';
+    currentState = initialState;
+    questions = initialState.contextQuestions.filter(q => !q.batchDate);
+  } else {
+    // Every other transition uses the daily batch: up to 10 generic
+    // knowledge-transfer questions, fresh each day.
+    mode = 'batch';
+    const batchResp = await LegacyAIState.getTodayBatch(trId);
+    todayBatchDate = batchResp.batchDate;
+    currentState = await LegacyAIState.get(); // reload so today's batch rows are included
+    questions = currentState.contextQuestions.filter(q => q.batchDate === todayBatchDate);
+  }
+
+  const modeNote = mode === 'batch'
+    ? `Legacy AI asks up to 10 questions a day — answer today's ${questions.length}, then send them for your manager's review.`
+    : `Legacy AI asks one contextual question at a time, drawn from your validated items, meeting notes, and public Slack threads. Every answer is written straight to the transition's context-capture log.`;
+  document.getElementById('headerSub').textContent = `${currentState.employee.name} · ${currentState.transitionId} — ${modeNote}`;
+  try { docChunks = await LegacyAIState.getDocChunks(currentState.employee.email); } catch (e) { docChunks = []; }
   renderQuestion();
   renderLog();
   renderRevisionPanel();

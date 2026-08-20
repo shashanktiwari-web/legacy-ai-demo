@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Legacy AI — Context Capture: Manager Review</title>
+<title>Legacy AI — Manager Action Center</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css" />
 <style>
   :root{
@@ -13,10 +13,12 @@
     --purple:#534ab7; --purple-bg:#eeedfe;
     --amber:#ba7517; --amber-bg:#faeeda;
     --red:#c93b3b; --red-bg:#fcebeb;
+    --gray-bg:#f1efe8;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
   .wrap{max-width:960px;margin:0 auto;padding:28px 32px 60px;}
+  .center-wrap{max-width:560px;margin:60px auto;padding:0 20px;}
   .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:16px;}
   .tag{font-size:12px;font-weight:600;color:var(--purple);background:var(--purple-bg);padding:3px 10px;border-radius:999px;}
   h1{font-size:22px;font-weight:600;margin:8px 0 4px;}
@@ -26,10 +28,20 @@
   .identity .name{font-weight:600;font-size:14px;}
   .identity .role{font-size:12.5px;color:var(--text-2);}
 
-  .banner{display:flex;align-items:center;gap:10px;background:var(--amber-bg);border:1px solid #f0d9ac;color:#7a4d0c;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:20px;}
-  .banner.done{background:var(--green-bg);border-color:#bfe6d7;color:#116349;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 24px;}
+  .field{display:flex;flex-direction:column;gap:5px;margin-top:14px;}
+  .field label{font-size:12.5px;font-weight:600;color:var(--text-2);}
+  input[type=email]{border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:13.5px;background:#fff;color:var(--text);}
+  .footnote{font-size:12px;color:var(--text-3);margin-top:14px;}
 
-  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px;}
+  .banner{display:flex;align-items:center;gap:10px;background:var(--amber-bg);border:1px solid #f0d9ac;color:#7a4d0c;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:18px;}
+  .banner.done{background:var(--green-bg);border-color:#bfe6d7;color:#116349;}
+  .banner.info{background:var(--surface);border-color:var(--border);color:var(--text-2);}
+
+  .section-title{font-size:15px;font-weight:600;margin:26px 0 10px;display:flex;align-items:center;gap:8px;}
+  .badge-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;font-size:11px;font-weight:700;}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:8px;}
   .stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
   .stat .num{font-size:26px;font-weight:600;}
   .stat .lbl{font-size:13px;color:var(--text-2);margin-top:2px;}
@@ -42,9 +54,11 @@
   .qa-a{font-size:14px;line-height:1.55;margin-bottom:12px;}
   .qa-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
   .status-pill{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;}
-  .st-pending{background:var(--gray-bg, #f1efe8);color:#514f49;}
+  .st-pending{background:var(--gray-bg);color:#514f49;}
   .st-approved{background:var(--green-bg);color:var(--green);}
   .st-flagged{background:var(--red-bg);color:#8c2a2a;}
+  .st-agreed{background:var(--green-bg);color:var(--green);}
+  .st-overruled{background:var(--purple-bg);color:var(--purple);}
   .row-btns{display:flex;gap:6px;}
   .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;padding:7px 12px;border-radius:8px;cursor:pointer;}
   .btn:hover{background:#f0f1f3;}
@@ -56,21 +70,45 @@
   .flag-note textarea{width:100%;min-height:60px;border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical;}
   .flag-note .lbl{font-size:12px;font-weight:600;color:#8c2a2a;margin-bottom:5px;display:block;}
 
+  .batch-summary{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:10px;font-size:13px;}
+  .batch-summary .left{display:flex;align-items:center;gap:10px;}
+  .pill-batchstatus{font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+  .pbs-open{background:var(--gray-bg);color:#514f49;}
+  .pbs-submitted{background:var(--amber-bg);color:var(--amber);}
+  .pbs-needs_revision{background:var(--red-bg);color:#8c2a2a;}
+  .pbs-approved{background:var(--green-bg);color:var(--green);}
+
   .cta{display:flex;justify-content:flex-end;margin-top:20px;}
-  .footnote{font-size:12px;color:var(--text-3);margin-top:14px;}
-  .empty-state{padding:40px 24px;text-align:center;color:var(--text-2);font-size:13.5px;background:var(--surface);border:1px solid var(--border);border-radius:12px;}
+  .empty-state{padding:32px 24px;text-align:center;color:var(--text-2);font-size:13.5px;background:var(--surface);border:1px solid var(--border);border-radius:12px;}
 
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#1b1e24;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;max-width:520px;text-align:center;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
-<div class="wrap">
+
+<!-- SCREEN 1: manager identity gate -->
+<div class="center-wrap" id="screenVerify">
+  <span class="tag">LEGACY AI · MANAGER ACTION CENTER</span>
+  <h1>Confirm it's you</h1>
+  <p class="sub">This is where you review disputed handover items and validate your report's context-capture answers.</p>
+  <div class="card">
+    <div class="field">
+      <label>Work email</label>
+      <input type="email" id="verifyEmail" placeholder="you@razorpay.com">
+      <span class="footnote" style="margin:0;" id="verifyHint">Enter your manager email to confirm it's really you.</span>
+    </div>
+    <div style="margin-top:18px;"><button class="btn primary" id="acceptBtn" onclick="acceptAndEnter()"><i class="ti ti-lock-open"></i> Enter Action Center</button></div>
+  </div>
+</div>
+
+<!-- SCREEN 2: the Manager Action Center -->
+<div class="wrap" id="screenCenter" style="display:none;">
 
   <div class="topbar">
     <div>
-      <span class="tag">LEGACY AI · DAY0 HACKATHON · STEP 2B</span>
-      <h1>Context capture — manager review</h1>
+      <span class="tag">LEGACY AI · MANAGER ACTION CENTER</span>
+      <h1>Manager Action Center</h1>
       <p class="sub" id="headerSub">Loading…</p>
     </div>
     <div class="identity">
@@ -82,130 +120,27 @@
     </div>
   </div>
 
-  <div class="banner" id="banner">
-    <i class="ti ti-shield-check"></i>
-    <span>Every answer needs your sign-off before Legacy AI builds the knowledge pack from it — this is what keeps the pack fool-proof.</span>
-  </div>
+  <div id="disputesSection"></div>
 
-  <div class="stats" id="stats"></div>
+  <div id="legacySection"></div>
 
-  <div id="cards"></div>
+  <div id="batchesSection"></div>
 
   <div class="cta">
-    <button class="btn primary" id="approveAllBtn" disabled onclick="goToKnowledgePack()"><i class="ti ti-arrow-right"></i> Approve all &amp; build knowledge pack</button>
+    <button class="btn primary" id="packBtn" onclick="goToKnowledgePack()"><i class="ti ti-arrow-right"></i> Open knowledge pack builder</button>
   </div>
-  <p class="footnote">Flagged answers block progress — the employee needs to revise a flagged item before the pack can be generated.</p>
+  <p class="footnote">The knowledge pack pulls from every answer approved so far — you don't need to wait for every batch to be done.</p>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script src="legacy-ai-state.js"></script>
 <script>
+let trId = null;
 let _state = null;
-let items = [];
-
-function renderStats(){
-  const total = items.length;
-  const approved = items.filter(i=>i.status==='approved').length;
-  const flagged = items.filter(i=>i.status==='flagged').length;
-  document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="num">${total}</div><div class="lbl">Answers submitted</div></div>
-    <div class="stat"><div class="num">${approved}</div><div class="lbl">Approved by manager</div></div>
-    <div class="stat"><div class="num">${flagged}</div><div class="lbl">Flagged for revision</div></div>
-  `;
-  const allApproved = items.length > 0 && items.every(i=>i.status==='approved');
-  const btn = document.getElementById('approveAllBtn');
-  btn.disabled = !allApproved;
-  const banner = document.getElementById('banner');
-  if(items.length === 0){
-    banner.className = 'banner';
-    banner.style.background = ''; banner.style.borderColor=''; banner.style.color='';
-    banner.innerHTML = `<i class="ti ti-info-circle"></i><span>No context-capture answers submitted yet — nothing to review.</span>`;
-  } else if(allApproved){
-    banner.className = 'banner done';
-    banner.innerHTML = `<i class="ti ti-circle-check"></i><span>All ${total} answers approved. Ready to build the knowledge pack.</span>`;
-  } else if(flagged > 0){
-    banner.className = 'banner';
-    banner.style.background = '#fcebeb'; banner.style.borderColor = '#f3c7c7'; banner.style.color = '#8c2a2a';
-    banner.innerHTML = `<i class="ti ti-alert-triangle"></i><span>${flagged} answer${flagged>1?'s':''} flagged — ${_state.employee.name} needs to revise before the knowledge pack can be built.</span>`;
-  } else {
-    banner.className = 'banner';
-    banner.style.background = ''; banner.style.borderColor=''; banner.style.color='';
-    banner.innerHTML = `<i class="ti ti-shield-check"></i><span>Every answer needs your sign-off before Legacy AI builds the knowledge pack from it — this is what keeps the pack fool-proof.</span>`;
-  }
-}
-
-function renderCards(){
-  const el = document.getElementById('cards');
-  if(items.length === 0){
-    el.innerHTML = `<div class="empty-state">Nothing here yet — this transition either hasn't started context capture, or no answers have been submitted.</div>`;
-    return;
-  }
-  el.innerHTML = items.map((it, idx) => {
-    const pillMap = {pending:['st-pending','Pending review'], approved:['st-approved','Approved'], flagged:['st-flagged','Flagged']};
-    const [cls, label] = pillMap[it.status];
-    let cardClass = it.status==='flagged' ? 'flagged' : it.status==='approved' ? 'approved' : '';
-    let actions = '';
-    if(it.status==='pending'){
-      actions = `<div class="row-btns">
-        <button class="btn sm primary" onclick="approve(${idx})"><i class="ti ti-check"></i> Approve</button>
-        <button class="btn sm" onclick="showFlag(${idx})"><i class="ti ti-flag"></i> Flag for revision</button>
-      </div>`;
-    } else if(it.status==='flagged'){
-      actions = `<div class="row-btns">
-        <button class="btn sm" onclick="approve(${idx})"><i class="ti ti-check"></i> Approve instead</button>
-      </div>`;
-    } else {
-      actions = `<div class="row-btns"><button class="btn sm" onclick="resetItem(${idx})">Undo</button></div>`;
-    }
-    const flagBox = it.showFlagBox ? `<div class="flag-note">
-        <label class="lbl">What needs to change?</label>
-        <textarea id="note-${idx}" placeholder="e.g. Double-check the NPCI sign-off timeline with compliance before we publish this.">${it.note||''}</textarea>
-        <div style="margin-top:8px;"><button class="btn sm primary" onclick="submitFlag(${idx})">Submit flag</button> <button class="btn sm" onclick="cancelFlag(${idx})">Cancel</button></div>
-      </div>` : (it.status==='flagged' && it.note ? `<div class="flag-note"><label class="lbl">Manager note</label><div style="font-size:13px;">${it.note}</div></div>` : '');
-    return `
-      <div class="qa-card ${cardClass}">
-        <span class="item-ref"><i class="ti ti-sparkles"></i> ${it.item}</span>
-        <div class="qa-q">${it.q}</div>
-        <div class="qa-a">${it.a}</div>
-        <div class="qa-actions">
-          <span class="status-pill ${cls}">${label}</span>
-          ${actions}
-        </div>
-        ${flagBox}
-      </div>
-    `;
-  }).join('');
-}
-
-async function approve(idx){
-  items[idx].status='approved'; items[idx].showFlagBox=false;
-  await LegacyAIState.saveContextReview(items[idx].item, 'approved', '');
-  renderAll(); showToast('Answer approved.');
-}
-function showFlag(idx){ items[idx].showFlagBox = true; renderAll(); }
-function cancelFlag(idx){ items[idx].showFlagBox = false; renderAll(); }
-async function submitFlag(idx){
-  const note = document.getElementById('note-'+idx).value.trim();
-  if(!note){ showToast('Add a short note on what needs to change.'); return; }
-  items[idx].status='flagged'; items[idx].note = note; items[idx].showFlagBox=false;
-  await LegacyAIState.saveContextReview(items[idx].item, 'flagged', note);
-  renderAll();
-  showToast(`Flagged — ${_state.employee.name} will need to revise this answer.`);
-}
-async function resetItem(idx){
-  items[idx].status='pending'; items[idx].note='';
-  await LegacyAIState.saveContextReview(items[idx].item, 'pending', '');
-  renderAll();
-}
-
-function renderAll(){ renderStats(); renderCards(); }
-
-function goToKnowledgePack(){
-  if(document.getElementById('approveAllBtn').disabled) return;
-  showToast('All answers approved — building knowledge pack...');
-  setTimeout(()=>{ window.location.href = LegacyAIState.linkTo('legacy-ai-knowledge-pack.html'); }, 700);
-}
+let batches = [];
+let allItems = []; // flattened context Q&A across legacy + batches
+let disputedItems = []; // validation items disputed by the employee
 
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -215,24 +150,276 @@ function showToast(msg){
   window._toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
 }
 
-async function init(){
+function goTo(id){
+  ['screenVerify','screenCenter'].forEach(s=>document.getElementById(s).style.display='none');
+  document.getElementById(id).style.display = id==='screenCenter' ? 'block' : 'block';
+}
+
+function acceptAndEnter(){
+  const email = document.getElementById('verifyEmail').value.trim().toLowerCase();
+  const expected = (_state.manager && _state.manager.email || '').toLowerCase();
+  if(!email || !email.includes('@')){ showToast('Enter a valid work email to continue.'); return; }
+  if(!email.endsWith('@razorpay.com')){ showToast('Only razorpay.com email addresses can access this — enter your Razorpay work email.'); return; }
+  if(email !== expected){ showToast(`This Action Center is for ${expected || 'a different manager'} only.`); return; }
+  goTo('screenCenter');
+  renderAll();
+}
+
+// ---------------------------------------------------------------------
+// Disputed validation items (moved here from the employee dashboard —
+// the employee can no longer act as manager on their own page).
+// ---------------------------------------------------------------------
+
+function renderDisputes(){
+  const el = document.getElementById('disputesSection');
+  if(disputedItems.length === 0){ el.innerHTML = ''; return; }
+  const openCount = disputedItems.filter(r=>r.mgrStatus==='pending').length;
+  el.innerHTML = `
+    <div class="section-title">Disputed handover items ${openCount>0?`<span class="badge-count">${openCount}</span>`:''}</div>
+    ${disputedItems.map(r => {
+      const mgrMap = {pending:['st-pending','Pending your review'], agreed:['st-agreed','You agreed with employee'], overruled:['st-overruled','You overruled — kept AI version']};
+      const [cls,label] = mgrMap[r.mgrStatus] || mgrMap.pending;
+      let actions = '';
+      if(r.mgrStatus==='pending'){
+        actions = `<div class="row-btns">
+          <button class="btn sm primary" onclick="setMgrDecision(${r.id},'agreed')"><i class="ti ti-check"></i> Agree with employee</button>
+          <button class="btn sm" onclick="setMgrDecision(${r.id},'overruled')"><i class="ti ti-x"></i> Overrule, keep AI version</button>
+        </div>`;
+      } else {
+        actions = `<div class="row-btns"><button class="btn sm" onclick="setMgrDecision(${r.id},'pending')">Undo</button></div>`;
+      }
+      return `
+        <div class="qa-card ${r.mgrStatus==='pending'?'flagged':'approved'}">
+          <span class="item-ref"><i class="ti ti-flag"></i> ${r.item}</span>
+          <div class="qa-q">${r.desc}</div>
+          <div class="qa-a">Employee's note: ${r.note || '—'}</div>
+          <div class="qa-actions">
+            <span class="status-pill ${cls}">${label}</span>
+            ${actions}
+          </div>
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+async function setMgrDecision(id, status){
+  const r = disputedItems.find(x=>x.id===id);
+  r.mgrStatus = status;
+  await LegacyAIState.updateValidationItem(id, { mgrStatus: status });
+  renderDisputes();
+  showToast(status==='pending' ? 'Reopened.' : (status==='agreed' ? 'Agreed with employee — item updated.' : 'Overruled — AI-drafted version kept.'));
+}
+
+// ---------------------------------------------------------------------
+// Legacy flat context-capture list (TR-1042 demo mode — questions with
+// no batch_date, i.e. asked before daily batching existed for this
+// transition). Kept exactly as before so the original demo still works.
+// ---------------------------------------------------------------------
+
+function renderLegacy(){
+  const el = document.getElementById('legacySection');
+  const legacyItems = allItems.filter(i=>!i.batchDate);
+  if(legacyItems.length === 0){ el.innerHTML = ''; return; }
+  const approved = legacyItems.filter(i=>i.status==='approved').length;
+  const flagged = legacyItems.filter(i=>i.status==='flagged').length;
+  el.innerHTML = `
+    <div class="section-title">Context-capture answers</div>
+    <div class="stats">
+      <div class="stat"><div class="num">${legacyItems.length}</div><div class="lbl">Answers submitted</div></div>
+      <div class="stat"><div class="num">${approved}</div><div class="lbl">Approved by you</div></div>
+      <div class="stat"><div class="num">${flagged}</div><div class="lbl">Flagged for revision</div></div>
+    </div>
+    ${legacyItems.map(it => qaCardHtml(it, 'legacy')).join('')}
+  `;
+}
+
+// ---------------------------------------------------------------------
+// Daily batches — up to 10 questions/day. Only "submitted" batches need
+// action from the manager; "open" ones are still with the employee,
+// "needs_revision" ones are waiting on the employee's fix, "approved"
+// ones are done. Once every item in a submitted batch is decided, one
+// real email goes to the employee — revision request if anything was
+// flagged, otherwise an all-approved notice.
+// ---------------------------------------------------------------------
+
+function qaCardHtml(it, scope){
+  const pillMap = {pending:['st-pending','Pending review'], approved:['st-approved','Approved'], flagged:['st-flagged','Flagged']};
+  const [cls, label] = pillMap[it.status];
+  const cardClass = it.status==='flagged' ? 'flagged' : it.status==='approved' ? 'approved' : '';
+  let actions = '';
+  if(it.status==='pending'){
+    actions = `<div class="row-btns">
+      <button class="btn sm primary" onclick="approveItem('${scope}','${encodeURIComponent(it.item)}')"><i class="ti ti-check"></i> Approve</button>
+      <button class="btn sm" onclick="showFlag('${scope}','${encodeURIComponent(it.item)}')"><i class="ti ti-flag"></i> Flag for revision</button>
+    </div>`;
+  } else if(it.status==='flagged'){
+    actions = `<div class="row-btns"><button class="btn sm" onclick="approveItem('${scope}','${encodeURIComponent(it.item)}')"><i class="ti ti-check"></i> Approve instead</button></div>`;
+  } else {
+    actions = `<div class="row-btns"><button class="btn sm" onclick="resetItem('${scope}','${encodeURIComponent(it.item)}')">Undo</button></div>`;
+  }
+  const flagBox = it.showFlagBox
+    ? `<div class="flag-note">
+        <label class="lbl">What needs to change?</label>
+        <textarea id="note-${scope}-${encodeURIComponent(it.item)}" placeholder="e.g. Double-check the NPCI sign-off timeline with compliance before we publish this.">${it.note||''}</textarea>
+        <div style="margin-top:8px;"><button class="btn sm primary" onclick="submitFlag('${scope}','${encodeURIComponent(it.item)}')">Submit flag</button> <button class="btn sm" onclick="cancelFlag('${scope}','${encodeURIComponent(it.item)}')">Cancel</button></div>
+      </div>`
+    : (it.status==='flagged' && it.note ? `<div class="flag-note"><label class="lbl">Your note</label><div style="font-size:13px;">${it.note}</div></div>` : '');
+  return `
+    <div class="qa-card ${cardClass}">
+      <span class="item-ref"><i class="ti ti-sparkles"></i> ${it.item}</span>
+      <div class="qa-q">${it.q}</div>
+      <div class="qa-a">${it.a}</div>
+      <div class="qa-actions">
+        <span class="status-pill ${cls}">${label}</span>
+        ${actions}
+      </div>
+      ${flagBox}
+    </div>
+  `;
+}
+
+function findItem(scope, encodedItem){
+  const item = decodeURIComponent(encodedItem);
+  const pool = scope==='legacy' ? allItems.filter(i=>!i.batchDate) : allItems.filter(i=>i.batchDate);
+  return pool.find(i=>i.item===item);
+}
+
+async function approveItem(scope, encodedItem){
+  const it = findItem(scope, encodedItem);
+  it.status='approved'; it.showFlagBox=false;
+  await LegacyAIState.saveContextReview(it.item, 'approved', '');
+  await afterItemChange(it);
+  showToast('Answer approved.');
+}
+function showFlag(scope, encodedItem){ findItem(scope, encodedItem).showFlagBox = true; renderAll(); }
+function cancelFlag(scope, encodedItem){ findItem(scope, encodedItem).showFlagBox = false; renderAll(); }
+async function submitFlag(scope, encodedItem){
+  const it = findItem(scope, encodedItem);
+  const note = document.getElementById(`note-${scope}-${encodedItem}`).value.trim();
+  if(!note){ showToast('Add a short note on what needs to change.'); return; }
+  it.status='flagged'; it.note = note; it.showFlagBox=false;
+  await LegacyAIState.saveContextReview(it.item, 'flagged', note);
+  await afterItemChange(it);
+  showToast(`Flagged — ${_state.employee.name} will need to revise this answer.`);
+}
+async function resetItem(scope, encodedItem){
+  const it = findItem(scope, encodedItem);
+  it.status='pending'; it.note='';
+  await LegacyAIState.saveContextReview(it.item, 'pending', '');
+  await afterItemChange(it);
+}
+
+// After any per-item decision, if that item belongs to a dated batch and
+// every item in that batch is now decided (none left "pending"), close
+// out the whole batch — approved if nothing was flagged, needs_revision
+// otherwise — and send exactly one email to the employee about it.
+async function afterItemChange(it){
+  if(it.batchDate){
+    const siblings = allItems.filter(i=>i.batchDate===it.batchDate);
+    const stillPending = siblings.some(i=>i.status==='pending');
+    if(!stillPending){
+      const anyFlagged = siblings.some(i=>i.status==='flagged');
+      const outcome = anyFlagged ? 'needs_revision' : 'approved';
+      try {
+        await LegacyAIState.reviewBatch(trId, it.batchDate, outcome);
+        emailEmployeeAboutBatch(it.batchDate, outcome, siblings);
+      } catch(e){ /* batch may already be closed — safe to ignore */ }
+    }
+  }
+  await loadState();
+  renderAll();
+}
+
+function emailEmployeeAboutBatch(batchDate, outcome, siblings){
+  const emp = _state.employee;
+  const mgr = _state.manager;
+  const link = LegacyAIState.linkTo('legacy-ai-context-capture.html', trId);
+  if(outcome==='needs_revision'){
+    const flagged = siblings.filter(i=>i.status==='flagged');
+    const subject = `Revisions needed on your ${batchDate} context-capture answers — ${trId}`;
+    const lines = flagged.map(i=>`- ${i.q}\n  Note: ${i.note}`).join('\n\n');
+    const body = `Hi ${emp.name.split(' ')[0]},\n\n${mgr.name} reviewed your answers from ${batchDate} and flagged ${flagged.length} for revision:\n\n${lines}\n\nOpen your context capture to revise: ${link}\n\n— Legacy AI`;
+    window.open(LegacyAIState.buildMailto(emp.email, subject, body), '_blank');
+    showToast('Batch marked for revision — opening Gmail to notify the employee.');
+  } else {
+    const subject = `Your ${batchDate} context-capture answers are approved — ${trId}`;
+    const body = `Hi ${emp.name.split(' ')[0]},\n\n${mgr.name} approved all ${siblings.length} of your answers from ${batchDate}. Nothing further needed on these — keep going with today's questions when they're ready.\n\n— Legacy AI`;
+    window.open(LegacyAIState.buildMailto(emp.email, subject, body), '_blank');
+    showToast('Batch approved — opening Gmail to notify the employee.');
+  }
+}
+
+function renderBatches(){
+  const el = document.getElementById('batchesSection');
+  const datedBatches = batches.filter(b=>b.batchDate);
+  if(datedBatches.length === 0){ el.innerHTML = ''; return; }
+  const submittedCount = datedBatches.filter(b=>b.status==='submitted').length;
+  el.innerHTML = `
+    <div class="section-title">Daily question batches ${submittedCount>0?`<span class="badge-count">${submittedCount}</span>`:''}</div>
+    ${datedBatches.map(b => {
+      const items = allItems.filter(i=>i.batchDate===b.batchDate);
+      const label = {open:'Employee still answering', submitted:'Ready for your review', needs_revision:'Waiting on employee revision', approved:'Approved'}[b.status] || b.status;
+      const pillClass = 'pbs-' + b.status;
+      if(b.status !== 'submitted'){
+        return `<div class="batch-summary">
+          <div class="left"><b>${b.batchDate}</b><span class="sub" style="font-size:12.5px;">${items.length} question${items.length===1?'':'s'}</span></div>
+          <span class="pill-batchstatus ${pillClass}">${label}</span>
+        </div>`;
+      }
+      return `
+        <div style="margin-bottom:18px;">
+          <div class="batch-summary" style="margin-bottom:10px;">
+            <div class="left"><b>${b.batchDate}</b><span class="sub" style="font-size:12.5px;">${items.length} question${items.length===1?'':'s'}</span></div>
+            <span class="pill-batchstatus ${pillClass}">${label}</span>
+          </div>
+          ${items.map(it => qaCardHtml(it, 'batch')).join('')}
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+function renderAll(){
+  renderDisputes();
+  renderLegacy();
+  renderBatches();
+}
+
+function goToKnowledgePack(){
+  window.location.href = LegacyAIState.linkTo('legacy-ai-knowledge-pack.html', trId);
+}
+
+async function loadState(){
   _state = await LegacyAIState.get();
-  items = _state.contextQuestions.map(q => {
+  batches = await LegacyAIState.listBatches(trId);
+  allItems = _state.contextQuestions.map(q => {
     const answer = _state.contextAnswers.find(a => a.item === q.item);
     const review = _state.contextReview.find(r => r.item === q.item);
+    const existing = (window.__prevItems || []).find(p => p.item === q.item);
     return {
       item: q.item,
       q: q.q,
       a: answer ? answer.a : q.dummy,
       status: review ? review.status : 'pending',
       note: review ? review.note : '',
+      batchDate: q.batchDate || null,
+      showFlagBox: existing ? existing.showFlagBox : false,
     };
   });
-  document.getElementById('headerSub').textContent = `${_state.employee.name}'s ${items.length} context-capture answer${items.length===1?'':'s'}, reviewed before they become part of the knowledge pack.`;
-  document.getElementById('mgrAvatar').textContent = _state.manager.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  document.getElementById('mgrName').textContent = _state.manager.name;
-  document.getElementById('mgrRole').textContent = `Manager · ${_state.transitionId}`;
-  renderAll();
+  window.__prevItems = allItems;
+  disputedItems = _state.validationItems.filter(v=>v.empStatus==='disputed');
+}
+
+async function init(){
+  trId = LegacyAIState.currentTransitionId();
+  await loadState();
+  document.getElementById('headerSub').textContent = `${_state.employee.name}'s handover (${trId}) — disputed items and context-capture answers waiting on you.`;
+  document.getElementById('verifyHint').textContent = _state.manager ? `This link is for ${_state.manager.email} — enter it to confirm it's really you.` : 'Enter your manager email to confirm it\'s really you.';
+  document.getElementById('mgrAvatar').textContent = _state.manager ? _state.manager.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() : '—';
+  document.getElementById('mgrName').textContent = _state.manager ? _state.manager.name : '—';
+  document.getElementById('mgrRole').textContent = `Manager · ${trId}`;
+  goTo('screenVerify');
 }
 
 init();

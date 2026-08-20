@@ -169,6 +169,12 @@
     <span><b>Identity verified and consent recorded</b> — every validation action below is written to the audit log at the bottom of this page with your email and a timestamp.</span>
   </div>
 
+  <div class="consent pending" id="disputeBanner" style="display:none;">
+    <i class="ti ti-alert-triangle"></i>
+    <span id="disputeBannerText"></span>
+    <button class="btn" style="margin-left:auto;" onclick="notifyManagerOfDisputes()"><i class="ti ti-mail"></i> Email manager</button>
+  </div>
+
   <div class="stats" id="stats"></div>
 
   <div class="panel">
@@ -191,7 +197,7 @@
           <option value="disputed">Disputed</option>
         </select>
       </div>
-      <div class="sub" style="font-size:12.5px;">Manager only sees rows the employee disputes</div>
+      <div class="sub" style="font-size:12.5px;">Disputed items are emailed to your manager — their decision shows up here once resolved.</div>
     </div>
 
     <div class="tablewrap">
@@ -208,7 +214,6 @@
           <th>Owner</th>
           <th>AI source</th>
           <th>Employee validation</th>
-          <th>Manager validation</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -287,6 +292,15 @@ function renderStats(){
   const allSettled = data.length > 0 && data.every(r=> (r.empStatus==='confirmed'||r.empStatus==='edited') || (r.empStatus==='disputed' && (r.mgrStatus==='agreed'||r.mgrStatus==='overruled')) );
   document.getElementById('proceedBtn').disabled = !allSettled;
   if(allSettled) document.getElementById('proceedBtn').classList.add('primary'); else document.getElementById('proceedBtn').classList.remove('primary');
+
+  const openDisputes = data.filter(r=>r.empStatus==='disputed' && r.mgrStatus==='pending');
+  const banner = document.getElementById('disputeBanner');
+  if(openDisputes.length > 0){
+    banner.style.display = 'flex';
+    document.getElementById('disputeBannerText').innerHTML = `<b>${openDisputes.length} disputed item${openDisputes.length>1?'s':''}</b> waiting on your manager — send them the review link.`;
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 function empPill(r){
@@ -300,20 +314,13 @@ function empPill(r){
       <button class="mini dispute" onclick="setEmp(${r.id},'disputed')">Dispute</button>
     </div>`;
   }
-  return html;
-}
-
-function mgrPill(r){
-  if(r.empStatus!=='disputed') return `<span class="st-na">Not needed</span>`;
-  const map = {pending:['st-pending','Pending review'], agreed:['st-agreed','Agreed with employee'], overruled:['st-overruled','Overruled — kept AI version']};
-  const [cls,label] = map[r.mgrStatus] || map.pending;
-  let html = `<span class="status-pill ${cls}">${label}</span>`;
-  if(r.note) html += `<div class="desc" style="margin-top:4px;">${r.note}</div>`;
-  if(r.mgrStatus==='pending'){
-    html += `<div class="row-actions">
-      <button class="mini confirm" onclick="setMgr(${r.id},'agreed')">Agree</button>
-      <button class="mini" onclick="setMgr(${r.id},'overruled')">Overrule</button>
-    </div>`;
+  if(r.empStatus==='disputed'){
+    // Read-only — the manager acts on disputes in their own Manager Action Center,
+    // not on this page. This just shows the employee where things stand.
+    const mgrMap = {pending:'Awaiting manager review', agreed:'Manager agreed with you', overruled:'Manager kept the AI version'};
+    const mgrLabel = mgrMap[r.mgrStatus] || mgrMap.pending;
+    html += `<div class="desc" style="margin-top:4px;">${mgrLabel}</div>`;
+    if(r.note) html += `<div class="desc" style="margin-top:2px;">${r.note}</div>`;
   }
   return html;
 }
@@ -326,7 +333,7 @@ function render(){
   const tbody = document.getElementById('rows');
   tbody.innerHTML = '';
   if(data.length === 0){
-    tbody.innerHTML = `<tr><td colspan="11"><div class="empty-state">No AI-drafted items yet for this transition — HR/manager still need to point Legacy AI at this employee's self-review docs.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state">No AI-drafted items yet for this transition — HR/manager still need to point Legacy AI at this employee's self-review docs.</div></td></tr>`;
     renderAudit();
     return;
   }
@@ -347,7 +354,6 @@ function render(){
       <td>${r.owner}</td>
       <td><span class="source"><i class="ti ti-sparkles"></i> ${r.source}</span></td>
       <td>${empPill(r)}</td>
-      <td>${mgrPill(r)}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -365,13 +371,19 @@ async function setEmp(id, status){
   showToast(msg);
 }
 
-async function setMgr(id, status){
-  const r = data.find(x=>x.id===id);
-  r.mgrStatus = status;
-  await LegacyAIState.updateValidationItem(id, { mgrStatus: status });
-  logAudit(`${currentState.manager.name} (manager)`, `${status==='agreed'?'Agreed with employee on':'Overruled dispute, kept AI version for'} "${r.item}"`);
-  render();
-  showToast(status==='agreed' ? 'Manager agreed with employee — item updated.' : 'Manager overruled — AI-drafted version kept.');
+function notifyManagerOfDisputes(){
+  const disputed = data.filter(r=>r.empStatus==='disputed' && r.mgrStatus==='pending');
+  if(disputed.length===0){ showToast('No open disputes to send.'); return; }
+  const mgr = currentState.manager;
+  const emp = currentState.employee;
+  const link = LegacyAIState.linkTo('legacy-ai-context-manager-review.html', currentState.transitionId);
+  const subject = `Handover disputes need your review — ${emp.name} (${currentState.transitionId})`;
+  const lines = disputed.map(r=>`- ${r.item}: ${r.desc}`).join('\n');
+  const body = `Hi ${mgr.name},\n\n${emp.name} has disputed ${disputed.length} item${disputed.length>1?'s':''} on their handover dashboard and needs your review:\n\n${lines}\n\nOpen the Manager Action Center to validate and correct: ${link}\n\n— Legacy AI`;
+  const url = LegacyAIState.buildMailto(mgr.email, subject, body);
+  window.open(url, '_blank');
+  logAudit(emp.name, `Emailed ${mgr.name} about ${disputed.length} disputed item${disputed.length>1?'s':''}.`);
+  showToast('Opening Gmail with the dispute summary...');
 }
 
 function proceedToContextCapture(){
