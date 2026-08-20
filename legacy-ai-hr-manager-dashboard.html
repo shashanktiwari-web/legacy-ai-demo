@@ -189,6 +189,13 @@
         <input type="file" id="csvFileInput" accept=".csv,text/csv" onchange="onCsvFileChosen(this)">
       </div>
       <div class="help"><i class="ti ti-info-circle"></i> In the Sheet: File → Download → Comma-separated values (.csv), then pick that file here — same header requirement as above. <b>Must be a real .csv file</b>, not .xlsx — there's no spreadsheet-binary parser in this build, only plain-text CSV.</div>
+
+      <div class="field" style="grid-column:1/-1; margin-top:12px; padding-top:10px; border-top:1px dashed var(--border-strong);">
+        <label>Doc scanning for org-restricted Google Docs</label>
+        <div id="googleStatusLine" class="help" style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <span><i class="ti ti-brand-google"></i> Checking Google connection…</span>
+        </div>
+      </div>
     </div>
     <div class="form-actions">
       <button class="btn primary" onclick="syncDirectoryNow()"><i class="ti ti-cloud-download"></i> Sync from link</button>
@@ -605,6 +612,29 @@ async function syncDirectoryFromPaste(){
   }
 }
 
+// Shows whether a Google account is connected server-side for reading
+// org-restricted Google Docs, with a "Connect"/"Reconnect" link. Actually
+// connecting is a real page navigation to /auth/google (Google's consent
+// screen refuses to render inside an iframe, so this always opens in a
+// new tab — safe whether or not this dashboard is itself embedded in the
+// demo hub's iframe).
+async function refreshGoogleStatusLine(){
+  const line = document.getElementById('googleStatusLine');
+  if(!line) return;
+  try {
+    const status = await LegacyAIState.getGoogleStatus();
+    if(status.connected){
+      line.innerHTML = `<span><i class="ti ti-circle-check" style="color:var(--green);"></i> Google account connected — can also read docs shared only within Razorpay.</span>
+        <a class="btn sm" href="/auth/google" target="_blank"><i class="ti ti-refresh"></i> Reconnect</a>`;
+    } else {
+      line.innerHTML = `<span><i class="ti ti-brand-google"></i> Not connected — doc-scan can only read fully public Google Docs right now.</span>
+        <a class="btn sm" href="/auth/google" target="_blank"><i class="ti ti-brand-google"></i> Connect Google account</a>`;
+    }
+  } catch (e) {
+    line.innerHTML = `<span class="missing">Could not check Google connection status: ${e.message}</span>`;
+  }
+}
+
 async function syncDirectoryNow(){
   const csvUrl = document.getElementById('csvUrlInput').value.trim();
   if(!csvUrl){ showToast('Paste the published CSV link first.'); return; }
@@ -805,6 +835,11 @@ async function init(){
     sel.appendChild(opt);
   });
   await refreshDirectoryStatusLine();
+  await refreshGoogleStatusLine();
+  // /auth/google/callback redirects back here with this flag on success.
+  if(new URLSearchParams(location.search).get('googleConnected') === '1'){
+    showToast('Google account connected — org-restricted docs can now be scanned.');
+  }
 }
 
 init();
