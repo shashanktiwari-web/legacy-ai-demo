@@ -525,6 +525,49 @@ async function refreshDirectoryDropdown(){
   });
 }
 
+// Quotes a value for safe inclusion as one CSV field (doubles embedded
+// quotes, per the standard CSV escaping rule). Needed because titles like
+// "Sr. Product Manager, Payments" contain a comma — sending it unquoted
+// shifts every field after it by one column on the server's CSV parser.
+function escapeCsvField(v){
+  return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+}
+
+// Lets HR/a manager fix one doc field by pasting a Google Doc URL directly,
+// instead of uploading a file or re-syncing the whole directory — the
+// fastest path when someone just has a link. Builds a single-row CSV from
+// this employee's *current* other fields (all quoted, so nothing shifts)
+// and sends it through the exact same tested sync-pasted endpoint the
+// paste/upload flows below use — no new backend route needed.
+async function setDocLinkViaPaste(email, field){
+  const fieldLabel = { q1Link:'Self-review Q1', q2Link:'Self-review Q2', q3Link:'Self-review Q3', expLink:'Manager expectations doc' }[field] || field;
+  const url = prompt(`Paste the Google Doc link for "${fieldLabel}":`);
+  if(url === null) return; // cancelled
+  const trimmed = url.trim();
+  if(!trimmed){ return; }
+  if(!/^https?:\/\//i.test(trimmed)){
+    showToast('That doesn\'t look like a link (must start with http:// or https://) — not saved.');
+    return;
+  }
+  const u = directory.find(d => d.email === email);
+  if(!u){ showToast('Could not find that employee in the directory.'); return; }
+  const updated = { ...u, [field]: trimmed };
+  const header = 'email,name,title,manager_email,is_hr,q1_link,q2_link,q3_link,exp_link';
+  const row = [
+    escapeCsvField(updated.email), escapeCsvField(updated.name), escapeCsvField(updated.title),
+    escapeCsvField(updated.managerEmail), updated.isHr ? 1 : 0,
+    escapeCsvField(updated.q1Link), escapeCsvField(updated.q2Link), escapeCsvField(updated.q3Link), escapeCsvField(updated.expLink),
+  ].join(',');
+  try {
+    await LegacyAIState.syncDirectoryFromPastedCsv([header, row].join('\n'));
+    u[field] = trimmed; // reflect locally without a full directory reload
+    showToast(`Saved the ${fieldLabel} link.`);
+    onEmployeePicked();
+  } catch (e) {
+    showToast('Could not save the link: ' + e.message);
+  }
+}
+
 // Reads a chosen .csv file as text and feeds it straight into the exact
 // same sync path as "Sync from pasted data" below — no new backend
 // endpoint, no CSV-parsing code duplicated. Deliberately does NOT accept
@@ -605,6 +648,14 @@ function onEmployeePicked(){
         <i class="ti ti-upload"></i> Upload
         <input type="file" style="display:none" onchange="uploadMissingDoc('${u.email}','${field}',this)">
       </label>`;
+  // Fastest fix for "I just have a Google Doc link, why do I need to upload
+  // a file?" — paste the URL directly instead of going through the file
+  // picker or a full directory re-sync. Reuses the exact same tested
+  // sync-pasted endpoint as the CSV paste/upload flows below.
+  const pasteLinkControl = (field) => `
+      <button type="button" class="btn sm" style="margin-left:6px;" onclick="setDocLinkViaPaste('${u.email}','${field}')">
+        <i class="ti ti-link"></i> Paste link
+      </button>`;
   const docRow = (label, field, link) => {
     if (isRealLink(link)) {
       // Still offer "Replace" even for a real link — a doc can be a valid
@@ -612,12 +663,12 @@ function onEmployeePicked(){
       // the previous version gave no way to fix that without leaving this
       // panel.
       return `<div class="row"><b>${label}</b> <a href="${link}" target="_blank">${link}</a>
-        <span style="margin-left:8px;">${uploadControl(field).replace('Upload','Replace')}</span>
+        <span style="margin-left:8px;">${uploadControl(field).replace('Upload','Replace')}${pasteLinkControl(field)}</span>
       </div>`;
     }
     const placeholderNote = link ? ` <span class="missing">(placeholder text, not a real link)</span>` : '';
     return `<div class="row"><b>${label}</b> <span class="missing">not on file${placeholderNote}</span>
-      ${uploadControl(field)}
+      ${uploadControl(field)}${pasteLinkControl(field)}
     </div>`;
   };
   preview.innerHTML = `
