@@ -700,6 +700,16 @@ function extractGoogleDocId(url) {
 async function fetchDocText(url) {
   const docId = extractGoogleDocId(url);
   if (!docId) {
+    // Uploaded files (PDF/DOCX/etc, saved under /uploads/) are real, working
+    // links — they just aren't Google Docs, so there's no plain-text export
+    // endpoint to read them from. Extracting text from an arbitrary PDF/DOCX
+    // would need a parsing library on what's otherwise a zero-dependency
+    // backend, so that's explicitly out of scope for now. Say that plainly
+    // instead of the generic "not a Google Doc" message, which reads like a
+    // broken link when the upload actually worked fine.
+    if (String(url || '').startsWith('/uploads/')) {
+      throw new Error('This is an uploaded file, not a Google Doc — it\'s attached and viewable, but excerpt scanning only supports Google Doc links right now.');
+    }
     throw new Error('Not a Google Doc link — only docs.google.com/document/d/<id>/... URLs can be fetched this way.');
   }
   const exportUrl = `https://docs.google.com/document/d/${docId}/export?format=txt`;
