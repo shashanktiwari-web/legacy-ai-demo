@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Legacy AI — How the AI works</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css" />
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#ffffff; --border:#e3e5e9; --border-strong:#c7cad1;
+    --text:#1b1e24; --text-2:#5b616e; --text-3:#8a8f99;
+    --accent:#3b5bfd; --accent-bg:#eaeeff;
+    --purple:#534ab7; --purple-bg:#eeedfe;
+    --green:#1d9e75; --green-bg:#e1f5ee;
+    --amber:#ba7517; --amber-bg:#faeeda;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:880px;margin:0 auto;padding:28px 32px 60px;}
+  .tag{font-size:12px;font-weight:600;color:var(--purple);background:var(--purple-bg);padding:3px 10px;border-radius:999px;}
+  h1{font-size:22px;font-weight:600;margin:10px 0 4px;}
+  .sub{color:var(--text-2);font-size:14px;margin:0 0 22px;}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;}
+  .panel-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+  .panel-head i{font-size:18px;color:var(--accent);}
+  .panel-head b{font-size:14.5px;}
+  .panel-body{padding:14px 18px;font-size:13.5px;line-height:1.65;color:var(--text);}
+  .panel-body p{margin:0 0 10px;}
+  .panel-body p:last-child{margin-bottom:0;}
+  .panel-body ul{margin:0 0 10px;padding-left:20px;}
+  .panel-body li{margin-bottom:6px;}
+
+  .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px;}
+  .pill{font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;}
+  .pill.ai{background:var(--purple-bg);color:var(--purple);}
+  .pill.not-ai{background:#eef0f3;color:var(--text-2);}
+
+  code{background:#f0f1f3;border-radius:4px;padding:1px 6px;font-size:12.5px;}
+
+  .honesty-box{background:var(--amber-bg);border:1px solid #f0d9ac;color:#7a4d0c;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.55;margin-top:4px;}
+  .honesty-box b{font-weight:600;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--border);}
+  th{color:var(--text-2);font-weight:600;font-size:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="tag">LEGACY AI · DAY0 HACKATHON · STEP 7</span>
+  <h1>How the AI works</h1>
+  <p class="sub">The honest technical breakdown — what's a real model call, what isn't, and why.</p>
+
+  <div class="panel">
+    <div class="panel-head"><i class="ti ti-sparkles"></i><b>Where the real AI is</b></div>
+    <div class="panel-body">
+      <p>Exactly one feature makes a live model call: the <b>Successor Companion</b> chat (Step 6). Everything
+      the successor types goes to a real, running LLM — it is not answering from a script.</p>
+      <table>
+        <tr><th>Model</th><td>Google <b>Gemini 3.6 Flash</b>, called server-side via the Gemini <code>generateContent</code> API</td></tr>
+        <tr><th>Where it runs</th><td>Node backend (<code>server.js</code>) — the API key never reaches the browser</td></tr>
+        <tr><th>Input</th><td>The successor's question + that specific transition's live handover items and captured context Q&A</td></tr>
+        <tr><th>Output</th><td>A generated answer, or an honest "I don't know, ask your manager" if the facts don't cover it</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><i class="ti ti-topology-star-3"></i><b>The grounding pattern — and what we're not calling it</b></div>
+    <div class="panel-body">
+      <p>We deliberately don't call this a "RAG pipeline." Classic RAG retrieves from a large corpus via vector
+      embeddings + similarity search. Our data per transition is small and already structured (a handful of
+      validated handover items and Q&A rows) — so instead of building an embeddings index for a dataset that
+      small, we do <b>structured context injection</b>: pull the transition's rows straight out of SQLite and
+      put them directly in the prompt, with an explicit instruction to answer only from those facts.</p>
+      <ul>
+        <li>Retrieval step: a plain SQL query (<code>getFullTransitionState</code>), not a vector search</li>
+        <li>Generation step: Gemini, instructed to decline rather than invent an answer if the facts don't cover the question</li>
+      </ul>
+      <p>This is the right-sized architecture for the data volume involved — not a shortcut dressed up as something bigger.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><i class="ti ti-eye-check"></i><b>What's deliberately NOT AI — and why</b></div>
+    <div class="panel-body">
+      <p>Everything else in the product is plain code, on purpose:</p>
+      <div class="pill-row">
+        <span class="pill not-ai">Doc search &amp; tagging</span>
+        <span class="pill not-ai">Knowledge pack assembly</span>
+        <span class="pill not-ai">Successor Q&amp;A fallback</span>
+        <span class="pill ai">Successor Companion chat</span>
+      </div>
+      <p>The doc-search feature (finding relevant excerpts in an employee's linked self-review docs) is
+      <b>keyword and tag matching</b> — no model call. The knowledge pack is <b>template assembly</b> over
+      validated data. The companion's fallback path (used if Gemini is unavailable) is
+      <b>keyword-overlap scoring</b>, not a second model.</p>
+      <div class="honesty-box">
+        <b>Why plain code instead of AI everywhere:</b> these steps deal with facts that must be exactly
+        right — what an employee actually validated, what a manager actually approved. Using deterministic
+        matching there means zero hallucination risk on the facts that matter most. The one place we do use
+        a model is the one place judgment and phrasing genuinely help: turning captured facts into a
+        conversational answer.
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><i class="ti ti-clock-bolt"></i><b>Handling AI latency &amp; failure honestly</b></div>
+    <div class="panel-body">
+      <p>Model calls are slower and less predictable than a database read, so the companion is built to show
+      that, not hide it:</p>
+      <ul>
+        <li><b>While waiting:</b> the chat shows an animated "thinking" indicator in place of the answer bubble — the UI never freezes or looks broken during the ~1-3s Gemini call.</li>
+        <li><b>If Gemini times out, errors, or the key is misconfigured:</b> the companion automatically falls back to local keyword matching over the same captured facts, and <b>says so explicitly</b> in the answer's source line (e.g. "keyword fallback — AI unavailable") — it never silently pretends the fallback answer came from the model.</li>
+        <li><b>If Gemini returns nothing usable</b> (e.g. blocked by a safety filter): same honest fallback, same visible labeling.</li>
+      </ul>
+      <p>We scoped this to a clear loading state + a transparent, labeled fallback rather than building full
+      token-by-token streaming (SSE) — the right trade-off for a hackathon timeline, without pretending the
+      non-determinism of an LLM call away.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

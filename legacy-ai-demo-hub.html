@@ -10,44 +10,75 @@
     --text:#1b1e24; --text-2:#5b616e; --text-3:#8a8f99;
     --accent:#3b5bfd; --accent-bg:#eaeeff;
     --purple:#534ab7; --purple-bg:#eeedfe;
+    --green:#1d9e75; --green-bg:#e1f5ee;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
   .shell{display:flex;flex-direction:column;height:100%;}
 
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap;gap:10px;}
-  .brand{display:flex;align-items:center;gap:10px;}
-  .brand .tag{font-size:11.5px;font-weight:600;color:var(--purple);background:var(--purple-bg);padding:3px 9px;border-radius:999px;}
-  .brand h1{font-size:16px;font-weight:600;margin:0;}
-  .topbar .actions{display:flex;gap:8px;}
+  /* ---------------- Hero / pitch ---------------- */
+  .hero{background:linear-gradient(135deg,#1b1e24,#2a2f3d);color:#fff;padding:22px 28px 20px;}
+  .hero-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:10px;}
+  .hero-brand{display:flex;align-items:center;gap:10px;}
+  .hero .tag{font-size:11px;font-weight:600;color:#c9d0ff;background:rgba(255,255,255,0.12);padding:3px 9px;border-radius:999px;}
+  .hero h1{font-size:19px;font-weight:600;margin:0;}
+  .hero-actions{display:flex;gap:8px;}
   .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;padding:7px 12px;border-radius:8px;cursor:pointer;}
   .btn:hover{background:#f0f1f3;}
+  .btn.on-dark{border-color:rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);color:#fff;}
+  .btn.on-dark:hover{background:rgba(255,255,255,0.16);}
 
+  .hero-pitch{font-size:15px;line-height:1.55;color:#e4e6ee;max-width:760px;margin:6px 0 16px;}
+  .hero-pitch b{color:#fff;}
+
+  .hero-steps{display:flex;gap:10px;flex-wrap:wrap;}
+  .hero-step{flex:1;min-width:190px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;color:#dfe1ea;}
+  .hero-step .hs-num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;font-size:10.5px;font-weight:700;margin-right:6px;}
+  .hero-step b{color:#fff;display:block;font-size:13px;margin-bottom:2px;}
+
+  /* ---------------- Tabs / stage ---------------- */
   .tabs{display:flex;gap:6px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;}
   .tab{display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:#fafbfc;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0;}
   .tab .num{width:20px;height:20px;border-radius:50%;background:var(--border);color:var(--text-2);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .tab:hover{border-color:var(--border-strong);}
   .tab.active{background:var(--text);color:#fff;border-color:var(--text);}
   .tab.active .num{background:rgba(255,255,255,0.25);color:#fff;}
+  .tab.ai-tab{border-color:var(--purple);}
+  .tab.ai-tab .num{background:var(--purple-bg);color:var(--purple);}
+  .tab.ai-tab.active .num{background:rgba(255,255,255,0.25);color:#fff;}
 
   .stage{flex:1;position:relative;background:var(--bg);}
   .stage iframe{position:absolute;inset:0;width:100%;height:100%;border:none;display:none;background:#fff;}
   .stage iframe.active{display:block;}
 
-  .footbar{padding:6px 20px;font-size:11.5px;color:var(--text-3);background:var(--surface);border-top:1px solid var(--border);}
+  .footbar{padding:7px 20px;font-size:11.5px;color:var(--text-3);background:var(--surface);border-top:1px solid var(--border);}
 </style>
 </head>
 <body>
 <div class="shell">
 
-  <div class="topbar">
-    <div class="brand">
-      <span class="tag">DAY0 HACKATHON</span>
-      <h1>Legacy AI — full demo walkthrough</h1>
+  <div class="hero">
+    <div class="hero-top">
+      <div class="hero-brand">
+        <span class="tag">DAY0 HACKATHON</span>
+        <h1>Legacy AI</h1>
+      </div>
+      <div class="hero-actions">
+        <button class="btn on-dark" onclick="resetDemo()" title="Resets the seeded TR-1042 (Alisha) walkthrough back to defaults. Transitions created via the directory picker are untouched."><i class="ti ti-refresh"></i> Reset demo data</button>
+        <button class="btn on-dark" onclick="openCurrentInNewTab()"><i class="ti ti-external-link"></i> Open this step full-screen</button>
+      </div>
     </div>
-    <div class="actions">
-      <button class="btn" onclick="resetDemo()" title="Resets the seeded TR-1042 (Alisha) walkthrough back to defaults. Transitions created via the directory picker are untouched."><i class="ti ti-refresh"></i> Reset demo data</button>
-      <button class="btn" onclick="openCurrentInNewTab()"><i class="ti ti-external-link"></i> Open this view full-screen</button>
+    <p class="hero-pitch">
+      When someone leaves a role, the knowledge that made them good at it usually leaves with them —
+      undocumented approvals, unwritten risks, the "ask so-and-so" context no wiki ever captures.
+      <b>Legacy AI</b> captures that knowledge from the outgoing employee before they're gone, has their
+      manager validate it, and hands the successor an AI companion trained on that specific person's
+      real context — so it can actually answer "who approves this?" instead of pointing at a stale doc.
+    </p>
+    <div class="hero-steps">
+      <div class="hero-step"><span class="hs-num">1</span><b>Capture</b>What's leaving, validated against real handover items — not guessed.</div>
+      <div class="hero-step"><span class="hs-num">2</span><b>Verify</b>Manager signs off daily, so nothing ships to the successor unchecked.</div>
+      <div class="hero-step"><span class="hs-num">3</span><b>Hand off</b>Successor asks a real AI, grounded in that context — see the "How the AI works" step for exactly what's real.</div>
     </div>
   </div>
 
@@ -55,31 +86,32 @@
 
   <div class="stage" id="stage"></div>
 
-  <div class="footbar">Each tab loads the actual working file — nothing here is a static screenshot. Navigation inside a view (e.g. "Notify employee", "Submit and continue") still works normally. All 6 views now share one live server-backed database — an edit in one view shows up in the others.</div>
+  <div class="footbar">Every step below is the real, working screen for that stage — not a mockup or screenshot. Try the full journey: what you enter in one step shows up in the next, exactly as it would for a real employee transition.</div>
 </div>
 
 <script src="legacy-ai-state.js"></script>
 <script>
 async function resetDemo(){
-  if(!confirm('Reset the seeded TR-1042 (Alisha) walkthrough back to its original defaults? This clears every edit made to that transition across all 6 views. Transitions you created via the directory picker on the HR dashboard are not affected.')) return;
+  if(!confirm('Reset the seeded TR-1042 (Alisha) walkthrough back to its original defaults? This clears every edit made to that transition across all steps. Transitions you created via the directory picker on the HR dashboard are not affected.')) return;
   await LegacyAIState.reset();
   location.reload();
 }
 
 const views = [
-  {id:'hr', num:1, label:'Transition dashboard', sub:'HR / Manager (login)', file:'legacy-ai-hr-manager-dashboard.html'},
-  {id:'validate', num:2, label:'Handover validation', sub:'Employee + Manager', file:'legacy-ai-employee-validation-dashboard.html'},
-  {id:'context', num:3, label:'Context capture', sub:'AI conversation', file:'legacy-ai-context-capture.html'},
-  {id:'contextreview', num:4, label:'Manager review', sub:'Context sign-off', file:'legacy-ai-context-manager-review.html'},
-  {id:'pack', num:5, label:'Knowledge pack', sub:'AI builds the legacy', file:'legacy-ai-knowledge-pack.html'},
-  {id:'bot', num:6, label:'Successor companion', sub:'Trained successor', file:'legacy-ai-successor-companion.html'},
+  {id:'hr', num:1, label:'Kick off a transition', sub:'HR / Manager', file:'legacy-ai-hr-manager-dashboard.html'},
+  {id:'validate', num:2, label:'Validate the handover', sub:'Employee + Manager', file:'legacy-ai-employee-validation-dashboard.html'},
+  {id:'context', num:3, label:'Capture daily context', sub:'Guided Q&A', file:'legacy-ai-context-capture.html'},
+  {id:'contextreview', num:4, label:'Manager signs off', sub:'Context review', file:'legacy-ai-context-manager-review.html'},
+  {id:'pack', num:5, label:'Build the knowledge pack', sub:'Assembled from validated data', file:'legacy-ai-knowledge-pack.html'},
+  {id:'bot', num:6, label:'Successor asks the AI', sub:'Grounded companion', file:'legacy-ai-successor-companion.html'},
+  {id:'architecture', num:7, label:'How the AI works', sub:'Model, grounding, honesty', file:'legacy-ai-architecture.html', ai:true},
 ];
 
 let active = views[0].id;
 
 function renderTabs(){
   document.getElementById('tabs').innerHTML = views.map(v => `
-    <div class="tab ${v.id===active?'active':''}" onclick="selectTab('${v.id}')">
+    <div class="tab ${v.id===active?'active':''} ${v.ai?'ai-tab':''}" onclick="selectTab('${v.id}')">
       <span class="num">${v.num}</span>
       <span>${v.label}</span>
     </div>
