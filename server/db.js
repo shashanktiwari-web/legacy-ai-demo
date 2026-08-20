@@ -579,6 +579,77 @@ function setSetting(key, value) {
   `).run(key, value);
 }
 
+// ---------------------------------------------------------------------
+// Google OAuth — lets the doc-scan feature read Google Docs shared only
+// within the Razorpay org ("Anyone at razorpay.com with the link"), which
+// Google's anonymous plain-text export endpoint always refuses (HTTP 401)
+// no matter what — that endpoint only ever works for fully public docs.
+// The only real fix is to sign in as a real Google account and use the
+// authenticated Drive API instead.
+//
+// Tokens are stored in the existing `settings` table as one JSON blob
+// (key 'google_oauth_tokens') — this is a single-user demo tool, not a
+// multi-tenant app, so one shared connected account is the right scope.
+// If nobody ever connects an account, every doc-fetch behaves exactly as
+// before (anonymous-only, unchanged) — this whole feature is additive.
+// ---------------------------------------------------------------------
+
+const GOOGLE_TOKEN_KEY = 'google_oauth_tokens';
+
+function getGoogleTokens() {
+  const raw = getSetting(GOOGLE_TOKEN_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function saveGoogleTokens(tokens) {
+  setSetting(GOOGLE_TOKEN_KEY, JSON.stringify(tokens));
+}
+
+function isGoogleConnected() {
+  return !!getGoogleTokens();
+}
+
+// Exchanges the stored refresh_token for a new access_token once the old
+// one has expired. Returns the refreshed token record, or null if there's
+// nothing to refresh (not connected, or credentials not configured) —
+// callers must treat null as "fall back to anonymous fetch", not an error.
+async function refreshGoogleAccessToken() {
+  const tokens = getGoogleTokens();
+  if (!tokens || !tokens.refresh_token) return null;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: tokens.refresh_token,
+      grant_type: 'refresh_token',
+    }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  const updated = {
+    ...tokens,
+    access_token: data.access_token,
+    expires_at: Date.now() + (data.expires_in * 1000) - 60000, // refresh 1 min early
+  };
+  saveGoogleTokens(updated);
+  return updated;
+}
+
+// Returns a currently-valid access token (refreshing first if needed), or
+// null if no Google account has ever been connected.
+async function getValidGoogleAccessToken() {
+  const tokens = getGoogleTokens();
+  if (!tokens) return null;
+  if (tokens.expires_at && Date.now() < tokens.expires_at) return tokens.access_token;
+  const refreshed = await refreshGoogleAccessToken();
+  return refreshed ? refreshed.access_token : null;
+}
+
 // Minimal quote-aware CSV parser — Google Sheets' CSV export quotes any
 // field containing a comma (e.g. a title like "DM, FinOps"), so a naive
 // split(',') would break those rows. Handles quoted fields, embedded
@@ -714,10 +785,27 @@ async function fetchDocText(url) {
   }
   const exportUrl = `https://docs.google.com/document/d/${docId}/export?format=txt`;
   const res = await fetch(exportUrl);
-  if (!res.ok) {
-    throw new Error(`Could not fetch the doc (HTTP ${res.status}). Make sure it's shared as "Anyone with the link can view".`);
+  if (res.ok) return res.text();
+
+  // Anonymous fetch was refused — almost always HTTP 401 because the doc
+  // is shared only within the org ("Anyone at razorpay.com with the
+  // link"), not truly public. If a Google account has been connected
+  // (see the OAuth section above), retry via the authenticated Drive API,
+  // which can read anything that signed-in account itself has view access
+  // to — including org-restricted docs.
+  if (res.status === 401 || res.status === 403) {
+    const accessToken = await getValidGoogleAccessToken();
+    if (accessToken) {
+      const authedRes = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${docId}/export?mimeType=text/plain`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (authedRes.ok) return authedRes.text();
+      throw new Error(`The connected Google account couldn't read this doc either (HTTP ${authedRes.status}) — make sure that account has at least view access to it.`);
+    }
+    throw new Error(`Could not fetch the doc (HTTP ${res.status}). If it's shared only within Razorpay (not "Anyone with the link"), connect a Google account from the Directory source panel to read it.`);
   }
-  return res.text();
+  throw new Error(`Could not fetch the doc (HTTP ${res.status}). Make sure it's shared as "Anyone with the link can view".`);
 }
 
 // Splits raw doc text into sentence-ish chunks. Deliberately crude (regex
@@ -806,6 +894,10 @@ module.exports = {
   resetTransitionProgress,
   getSetting,
   setSetting,
+  getGoogleTokens,
+  saveGoogleTokens,
+  isGoogleConnected,
+  getValidGoogleAccessToken,
   syncDirectoryFromCsv,
   syncDirectoryFromPastedCsv,
   updateUserDocLink,

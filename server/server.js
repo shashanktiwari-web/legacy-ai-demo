@@ -85,6 +85,93 @@ async function askGemini(question, state) {
   }
 }
 
+// ---------------------------------------------------------------------
+// Google OAuth — lets the doc-scan feature read Google Docs shared only
+// within Razorpay ("Anyone at razorpay.com with the link"), which the
+// anonymous export used elsewhere always gets refused for (HTTP 401). See
+// the long comment above the token-storage functions in db.js for why.
+//
+// Requires GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET as env vars — if
+// they're not set yet, /auth/google shows a clear setup message instead
+// of crashing, and nothing else in the app changes (doc-fetch just stays
+// anonymous-only, exactly as before this feature existed).
+// ---------------------------------------------------------------------
+
+const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+
+// Render terminates TLS in front of the app, so the request this process
+// actually sees is plain http — reconstruct the real https callback URL
+// Google needs (must exactly match what's registered in Cloud Console).
+function googleRedirectUri(req) {
+  return `https://${req.headers.host}/auth/google/callback`;
+}
+
+function handleGoogleAuthStart(req, res) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    res.writeHead(500, { 'Content-Type': 'text/html' });
+    return res.end('<p>GOOGLE_CLIENT_ID is not configured on the server yet — add it (and GOOGLE_CLIENT_SECRET) as environment variables first.</p>');
+  }
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: googleRedirectUri(req),
+    response_type: 'code',
+    scope: GOOGLE_SCOPE,
+    access_type: 'offline', // request a refresh_token, not just a short-lived access_token
+    prompt: 'consent',      // force Google to re-issue a refresh_token even on a repeat connect
+  });
+  res.writeHead(302, { Location: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
+  res.end();
+}
+
+async function handleGoogleAuthCallback(req, res, searchParams) {
+  const code = searchParams.get('code');
+  const authError = searchParams.get('error');
+  if (authError) {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    return res.end(`<p>Google sign-in was cancelled or denied (${authError}). <a href="/legacy-ai-hr-manager-dashboard.html">Go back</a>.</p>`);
+  }
+  if (!code) {
+    res.writeHead(400, { 'Content-Type': 'text/html' });
+    return res.end('<p>Missing authorization code from Google.</p>');
+  }
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: googleRedirectUri(req),
+        grant_type: 'authorization_code',
+      }),
+    });
+    const data = await tokenRes.json();
+    if (!tokenRes.ok) {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      return res.end(`<p>Google sign-in failed: ${data.error_description || data.error || 'unknown error'}. <a href="/legacy-ai-hr-manager-dashboard.html">Go back</a>.</p>`);
+    }
+    // Google only returns a refresh_token on the very first consent unless
+    // prompt=consent forces it every time (which handleGoogleAuthStart
+    // sets) — but if it's ever missing anyway, keep the previously stored
+    // one rather than overwriting it with nothing.
+    const existing = store.getGoogleTokens();
+    store.saveGoogleTokens({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token || (existing && existing.refresh_token) || null,
+      expires_at: Date.now() + (data.expires_in * 1000) - 60000,
+    });
+    res.writeHead(302, { Location: '/legacy-ai-hr-manager-dashboard.html?googleConnected=1' });
+    res.end();
+  } catch (e) {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`<p>Google sign-in failed: ${e.message}. <a href="/legacy-ai-hr-manager-dashboard.html">Go back</a>.</p>`);
+  }
+}
+
 // Where uploaded self-review / manager-expectations docs land when there's
 // no existing Google Doc link to use instead. Lives inside FRONTEND_DIR so
 // the existing static-file serving below already covers /uploads/* for
@@ -153,6 +240,12 @@ async function handleApi(req, res, pathname, searchParams) {
         isHr: !!u.is_hr, q1Link: u.q1_link, q2Link: u.q2_link, q3Link: u.q3_link, expLink: u.exp_link,
       }));
       return sendJson(res, 200, users);
+    }
+
+    // GET /api/google/status — whether a Google account is connected, so
+    // the UI can show "Connect Google account" vs. "Connected".
+    if (req.method === 'GET' && pathname === '/api/google/status') {
+      return sendJson(res, 200, { connected: store.isGoogleConnected() });
     }
 
     // GET /api/directory/source — the saved Google Sheet CSV URL, if any.
@@ -355,6 +448,12 @@ async function handleApi(req, res, pathname, searchParams) {
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  if (url.pathname === '/auth/google') {
+    return handleGoogleAuthStart(req, res);
+  }
+  if (url.pathname === '/auth/google/callback') {
+    return handleGoogleAuthCallback(req, res, url.searchParams);
+  }
   if (url.pathname.startsWith('/api/')) {
     handleApi(req, res, url.pathname, url.searchParams);
   } else {
