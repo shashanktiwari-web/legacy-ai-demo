@@ -878,6 +878,35 @@ function getDocChunks(employeeEmail, tag) {
     .filter(r => !tag || r.tags.includes(tag));
 }
 
+// ---------------------------------------------------------------------
+// AI-drafted handover items — replaces whatever validation_items exist
+// for a transition with a freshly AI-drafted set (server.js does the
+// actual Gemini call + doc-fetching; this just owns the "replace" write
+// so it's atomic). Used by the HR/Manager dashboard's "AI: Draft items"
+// button so any real employee's transition — not just the hardcoded
+// TR-1042 demo — can get a populated Handover Validation Dashboard from
+// their actual linked documents instead of staying empty forever.
+// ---------------------------------------------------------------------
+
+function replaceGeneratedValidationItems(transitionId, items) {
+  db.exec('BEGIN');
+  try {
+    db.prepare('DELETE FROM validation_items WHERE transition_id = ?').run(transitionId);
+    const insert = db.prepare(`
+      INSERT INTO validation_items (transition_id, cat, cat_label, item, description, cur_status, doc, stakeholders, priority, owner, source, emp_status, mgr_status, note)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'na', NULL)
+    `);
+    for (const it of items) {
+      insert.run(transitionId, it.cat, it.catLabel, it.item, it.description, it.curStatus, it.doc, it.stakeholders, it.priority, it.owner, it.source);
+    }
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+  return items.length;
+}
+
 module.exports = {
   db,
   userByEmail,
@@ -909,4 +938,7 @@ module.exports = {
   listHrEmails,
   syncEmployeeDocs,
   getDocChunks,
+  fetchDocText,
+  DOC_FIELDS,
+  replaceGeneratedValidationItems,
 };

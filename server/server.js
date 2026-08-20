@@ -86,6 +86,102 @@ async function askGemini(question, state) {
 }
 
 // ---------------------------------------------------------------------
+// AI-drafted handover items — the second genuinely load-bearing AI step
+// (see legacy-ai-architecture.html, updated alongside this). Reads an
+// employee's real linked documents (self-reviews + manager expectations)
+// and asks Gemini to extract concrete handover items ONLY if they're
+// actually in the text — explicitly told to write "Not specified in
+// docs" rather than invent a stakeholder, status, or project that isn't
+// there. This is what makes the Handover Validation Dashboard work for
+// any real employee, not just the hardcoded TR-1042 (Alisha) demo data.
+// ---------------------------------------------------------------------
+
+const VALID_ITEM_CATS = {
+  'cat-projects': 'Projects',
+  'cat-stake': 'Stakeholders',
+  'cat-process': 'Process',
+  'cat-access': 'Access',
+  'cat-deps': 'Dependencies',
+};
+
+const DOC_FIELD_SOURCE_LABEL = {
+  q1Link: 'Self-review Q1',
+  q2Link: 'Self-review Q2',
+  q3Link: 'Self-review Q3',
+  expLink: 'Manager expectations doc',
+};
+
+// Returns { ok:true, items } or { ok:false, error }. `textsByField` is
+// { q1Link: '...text...', expLink: '...text...' } — only fields that were
+// actually readable are present, so the prompt (and Gemini's grounding)
+// only ever sees real fetched document text, never a placeholder.
+async function askGeminiForValidationItems(employeeName, textsByField) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { ok: false, error: 'GEMINI_API_KEY is not configured on the server — AI drafting is unavailable.' };
+  }
+  const fieldsPresent = Object.keys(textsByField);
+  const sections = fieldsPresent
+    .map(field => `--- ${DOC_FIELD_SOURCE_LABEL[field]} ---\n${String(textsByField[field]).slice(0, 6000)}`)
+    .join('\n\n');
+  const prompt = `You are extracting a handover checklist for ${employeeName}, who is leaving their role. `
+    + `Below are real documents: their self-review(s) and/or their manager's expectations doc. `
+    + `Extract up to 10 concrete handover items ONLY if they are actually described in the text below — `
+    + `never invent a project, stakeholder, or fact that isn't there. If something like stakeholders or `
+    + `current status isn't stated for an item, use exactly the string "Not specified in docs" rather than guessing.\n\n`
+    + `Return ONLY a JSON array (no markdown fences, no commentary before or after), where each item has `
+    + `exactly these keys: cat (one of "cat-projects","cat-stake","cat-process","cat-access","cat-deps"), `
+    + `item (short title, 8 words or fewer), description (1-2 sentences), curStatus (short phrase or `
+    + `"Not specified in docs"), stakeholders (names/teams mentioned, or "Not specified in docs"), `
+    + `priority ("high", "medium", or "low"), sourceField (one of ${fieldsPresent.map(f => `"${f}"`).join(', ')} `
+    + `— whichever document this item came from).\n\n${sections}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      return { ok: false, error: `Gemini API error (HTTP ${res.status}): ${errText.slice(0, 200)}` };
+    }
+    const data = await res.json();
+    const raw = data.candidates && data.candidates[0] && data.candidates[0].content
+      && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+      && data.candidates[0].content.parts[0].text;
+    if (!raw) return { ok: false, error: 'Gemini returned no content (possibly blocked by a safety filter).' };
+    const cleaned = raw.trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(cleaned); }
+    catch (e) { return { ok: false, error: 'Gemini did not return valid JSON — try again.' }; }
+    if (!Array.isArray(parsed)) return { ok: false, error: 'Gemini did not return a JSON array — try again.' };
+    const items = parsed.slice(0, 10).map(entry => {
+      const cat = VALID_ITEM_CATS[entry.cat] ? entry.cat : 'cat-process';
+      const catLabel = VALID_ITEM_CATS[cat];
+      const priority = ['high', 'medium', 'low'].includes(entry.priority) ? entry.priority : 'medium';
+      const sourceField = textsByField[entry.sourceField] !== undefined ? entry.sourceField : fieldsPresent[0];
+      const sourceLabel = DOC_FIELD_SOURCE_LABEL[sourceField] || 'Linked document';
+      return {
+        cat, catLabel,
+        item: entry.item ? String(entry.item).slice(0, 120) : '',
+        description: String(entry.description || 'Not specified in docs').slice(0, 500),
+        curStatus: String(entry.curStatus || 'Not specified in docs').slice(0, 200),
+        doc: sourceLabel,
+        stakeholders: String(entry.stakeholders || 'Not specified in docs').slice(0, 200),
+        priority,
+        owner: employeeName,
+        source: `${sourceLabel} (AI-drafted)`,
+      };
+    }).filter(it => it.item);
+    if (items.length === 0) return { ok: false, error: 'Gemini found nothing concrete enough to draft from these documents.' };
+    return { ok: true, items };
+  } catch (e) {
+    return { ok: false, error: 'Could not reach Gemini: ' + e.message };
+  }
+}
+
+// ---------------------------------------------------------------------
 // Google OAuth — lets the doc-scan feature read Google Docs shared only
 // within Razorpay ("Anyone at razorpay.com with the link"), which the
 // anonymous export used elsewhere always gets refused for (HTTP 401). See
@@ -372,6 +468,44 @@ async function handleApi(req, res, pathname, searchParams) {
       if (!state) return sendJson(res, 404, { error: 'Transition not found' });
       const answer = await askGemini(body.question, state);
       return sendJson(res, 200, answer);
+    }
+
+    // POST /api/transitions/:id/generate-items — (re)draft this
+    // transition's handover items from the employee's real linked docs
+    // via Gemini. Replaces whatever validation_items currently exist for
+    // this transition, so this is the fix for "Handover Validation
+    // Dashboard is blank" for any employee who isn't the hardcoded
+    // TR-1042 demo — it actually reads their docs instead of relying on
+    // seed data that only ever existed for one person.
+    if (req.method === 'POST' && parts[0] === 'api' && parts[1] === 'transitions' && parts[2] && parts[3] === 'generate-items') {
+      const state = store.getFullTransitionState(parts[2]);
+      if (!state) return sendJson(res, 404, { error: 'Transition not found' });
+      if (!state.employee) return sendJson(res, 400, { error: 'This transition has no employee on file.' });
+      const user = store.userByEmail(state.employee.email);
+      const fieldErrors = [];
+      const textsByField = {};
+      for (const { field, column } of store.DOC_FIELDS) {
+        const docUrl = user ? user[column] : null;
+        if (!docUrl) { fieldErrors.push({ field, status: 'missing' }); continue; }
+        try {
+          textsByField[field] = await store.fetchDocText(docUrl);
+        } catch (e) {
+          fieldErrors.push({ field, status: 'error', message: e.message });
+        }
+      }
+      if (Object.keys(textsByField).length === 0) {
+        return sendJson(res, 200, {
+          ok: false,
+          error: "Could not read any of this employee's linked documents — nothing to draft items from.",
+          fieldErrors,
+        });
+      }
+      const result = await askGeminiForValidationItems(state.employee.name, textsByField);
+      if (!result.ok) {
+        return sendJson(res, 200, { ok: false, error: result.error, fieldErrors });
+      }
+      const count = store.replaceGeneratedValidationItems(parts[2], result.items);
+      return sendJson(res, 200, { ok: true, count, fieldErrors });
     }
 
     // POST /api/transitions/:id/context-answers
